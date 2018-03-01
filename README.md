@@ -10,6 +10,7 @@ You have a database that you need to access from programs but have none of the d
 What you must have to use Tidal:
 1) Access to the database to create stored procedures
 2) Code in a supported language (currently C#, soon VB.NET, Java and Javascript)
+3) Use a database that is supported by Tidal (currently MySQL and MSSQL)
 
 What Tidal does:
 1) Takes a table structure from a database and creates Create, Read, Update, Delete, and List functions.  You then run the SQL script to add these stored procedures to the database.
