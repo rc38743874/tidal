@@ -7,7 +7,9 @@ namespace TidalCSharp {
 	public class ModelCreator {
 
 		public static void MakeModels (List<TableDef> tableDefList, string namespaceText, string directory) {
-
+			if (directory.EndsWith(Path.DirectorySeparatorChar.ToString()) == false) {
+				directory += Path.DirectorySeparatorChar;
+			}
 			foreach (var tableDef in tableDefList) {
 
                 Console.WriteLine("Making model from table " + tableDef.TableName);
