@@ -48,7 +48,18 @@ namespace TidalCSharp {
                     DbConnectionStringBuilder dbcs = new DbConnectionStringBuilder();
                     dbcs.ConnectionString = tidalOptions.ConnectionString;
                     Console.WriteLine("checking for database name");
-                    string databaseName = (string)dbcs["database"];
+					string databaseName;
+					if (dbcs.ContainsKey("database")) {
+						databaseName = (string)dbcs["database"];
+					}
+					else {
+						if (dbcs.ContainsKey("Initial Catalog")) {
+							databaseName = (string)dbcs["Initial Catalog"];
+						}
+						else {
+							throw new ApplicationException("A database name is required in the connection string.  Please use either Database=VALUE or Initial Catalog=VALUE.");
+						}
+					}
 
                     Console.WriteLine("making connection");
                     using (DbConnection conn = processor.GetConnection(tidalOptions.ConnectionString, tidalOptions.Password)) {
