@@ -112,7 +112,10 @@ namespace TidalCSharp {
 
 				if (tableDef.TableType == "TABLE") {
 					if (primaryKeyList != null) {
-						scriptText.Append(GetUpdateProcedureText(moduleName, tableDef, primaryKeyList));
+						/* only make an update if there are more columns than primary ones, otherwise nothing to update */
+						if (tableDef.ColumnDefMap.Count > primaryKeyList.Count) {
+							scriptText.Append(GetUpdateProcedureText(moduleName, tableDef, primaryKeyList));
+						}
 					}
 				} // if table
 
