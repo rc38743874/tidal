@@ -168,6 +168,9 @@ namespace TidalCSharp {
 				OutputDataType(scriptText, identityColumnDef);
                 scriptText.AppendLine(" OUT");
 			}
+			else {
+				scriptText.AppendLine();
+			}
 
 			scriptText.AppendLine("AS");
             scriptText.Append("\tINSERT " + CleanName(tableName) + " (");
