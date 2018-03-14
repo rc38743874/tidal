@@ -72,8 +72,29 @@ namespace TidalCSharp {
 				return false;
 			}
 
+			
+
+			if (this.ShouldShowHelp == true) {
+				Console.WriteLine ("Usage: tidal-csharp.exe database-type [OPTIONS]");
+				Console.WriteLine ("Create a DataAccess.cs class in C#, and/or intermediate definition files.");
+				Console.WriteLine ();
+
+
+				Console.WriteLine ("database-type:");
+				Console.WriteLine("\tmssql: Microsoft SQL Server");
+				Console.WriteLine("\tmysql: MySQL");
+
+				// output the options
+				Console.WriteLine ("Options:");
+				this.optionSet.WriteOptionDescriptions (Console.Out);
+
+				Console.WriteLine("Examples:");
+				Console.WriteLine("tidal-csharp.exe mssql [OPTIONS]");
+				return false;
+			}
+
 			if (extraCommandList.Count == 0) {
-				Console.WriteLine ("Database type argument required but not found.");
+				Console.WriteLine("Database type argument required but not found.");
 				Console.WriteLine("Try 'tidal-csharp.exe --help' for more information.");
 				return false;
 			}
@@ -95,25 +116,6 @@ namespace TidalCSharp {
 					Console.WriteLine("\t" + extraLine);
 				}
 				Console.WriteLine("Try 'tidal-csharp.exe --help' for more information.");
-				return false;
-			}
-
-			if (this.ShouldShowHelp == true) {
-				Console.WriteLine ("Usage: tidal-csharp.exe database-type [OPTIONS]");
-				Console.WriteLine ("Create a DataAccess.cs class in C#, and/or intermediate definition files.");
-				Console.WriteLine ();
-
-
-				Console.WriteLine ("database-type:");
-				Console.WriteLine("\tmssql: Microsoft SQL Server");
-				Console.WriteLine("\tmysql: MySQL");
-
-				// output the options
-				Console.WriteLine ("Options:");
-				this.optionSet.WriteOptionDescriptions (Console.Out);
-
-				Console.WriteLine("Examples:");
-				Console.WriteLine("tidal-csharp.exe mssql [OPTIONS]");
 				return false;
 			}
 
