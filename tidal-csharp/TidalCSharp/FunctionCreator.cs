@@ -24,9 +24,14 @@ namespace TidalCSharp {
 					modelDef = modelDefMap[modelName];
 				}
 				else {
-					throw new ApplicationException("Table did not have equivalent model: " + modelName);
+					Console.WriteLine("Procedure " + procedureName + " coded for table named " + modelName + " did not have a matching model in the models collection.");
+					Console.WriteLine("Available models follow:");
+					foreach (var modelDefTest in modelDefMap.Keys) {
+						Console.WriteLine(modelDefTest);
+					}
+					throw new ApplicationException("Procedure " + procedureName + " coded for table named " + modelName + " did not have a matching model in the models collection.");
 				}
-
+				
 				FunctionDef functionDef = new FunctionDef {
 					FunctionName = functionName,
 					ProcedureDef = procedureDef,

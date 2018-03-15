@@ -220,7 +220,6 @@ namespace TidalCSharp {
 		}
 
 		public void AddFunctionArguments(StringBuilder buildText, ModelDef modelDef, FunctionDef functionDef) {
-
 			bool firstParameter = true;
 			foreach (ArgumentDef argumentDef in functionDef.ArgumentDefList) {
 				if (firstParameter) {
@@ -229,10 +228,15 @@ namespace TidalCSharp {
 				else {
 					buildText.AppendLine(",");
 				}
-
 				buildText.Append("\t\t\t\t\t\t");
 				PropertyDef propertyDef = argumentDef.PropertyDef;
+
+				if (propertyDef == null) {
+					throw new ApplicationException("Argument " + argumentDef.ArgumentName + " in function " + functionDef.FunctionName + " for " + functionDef.ProcedureDef.ProcedureName + " had a null PropertyDef.  Does the primary key column exist as a field in the model class?");
+				}
+
 				if (propertyDef.IsReference) {
+					Console.WriteLine("5");
 					string subPropertyName = propertyDef.PropertyName;
 					if (argumentDef.ArgumentName.EndsWith("Key")) {
 						subPropertyName = propertyDef.PropertyTypeCode + "ID";

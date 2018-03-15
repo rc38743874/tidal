@@ -97,11 +97,20 @@ namespace TidalCSharp {
 				 * a table scan (I think it would be) will be very inefficient anyway.  So for now
 				 * we are going to opt against having ListFor procedures for foreign key constraints if
 				 * they are not indexed.
+				 * 
+				 * Primary keys with more than one field you should be able to get a list for everything 
+				 * at the beginning of the list sequence.
+				 * 
 				 */
 				List<ColumnDef> primaryKeyList = null;
 				foreach (IndexDef indexDef in tableDef.IndexDefMap.Values) {
 					if (indexDef.IsPrimary == true) {
 						primaryKeyList = indexDef.ColumnDefList;
+						if (primaryKeyList.Count > 1) {
+							for (int endIndex = 0; endIndex < primaryKeyList.Count - 1; endIndex++) {
+								scriptText.Append(GetListForProcedureText(moduleName, tableDef, indexDef.ColumnDefList.Take(endIndex+1).ToList<ColumnDef>()));
+							}
+						}
 					}
 					else {
 						if (indexDef.IsUnique == false) {
@@ -122,7 +131,9 @@ namespace TidalCSharp {
 
 				foreach (ColumnDef columnDef in tableDef.ColumnDefMap.Values) {
 					if (columnDef.ReferencedTableDef != null) {
-						scriptText.Append(GetUpdateKeyProcedureText(moduleName, tableDef, primaryKeyList, columnDef));
+						if (primaryKeyList != null) {
+							scriptText.Append(GetUpdateKeyProcedureText(moduleName, tableDef, primaryKeyList, columnDef));
+						}
 					}
 				}
 
@@ -447,7 +458,7 @@ namespace TidalCSharp {
 				scriptText.Append("\t@" + columnDef.ColumnName + " ");
 				OutputDataType(scriptText, columnDef);
 			}
-		
+			scriptText.AppendLine();
 			scriptText.AppendLine("AS");
 
 			scriptText.Append("SELECT ");

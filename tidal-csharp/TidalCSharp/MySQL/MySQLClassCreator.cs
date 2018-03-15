@@ -221,7 +221,6 @@ namespace TidalCSharp {
 		}
 
 		public void AddFunctionArguments(StringBuilder buildText, ModelDef modelDef, FunctionDef functionDef) {
-
 			bool firstParameter = true;
 			foreach (ArgumentDef argumentDef in functionDef.ArgumentDefList) {
 				if (firstParameter) {

@@ -101,9 +101,10 @@ namespace TidalCSharp {
                             ModelCreator.MakeModels(tableDefList, tidalOptions.ModelsNamespace, tidalOptions.ModelsPathOut);
                         }
 
+						
 
 
-                        Console.WriteLine("reading models");
+						Console.WriteLine("reading models");
                         /* read object model */
                         Dictionary<string, ModelDef> modelDefMap = ModelReader.ReadFromFile(tidalOptions.ModelsAssemblyFileName, tidalOptions.ModelsNamespace);
 

@@ -121,7 +121,9 @@ namespace TidalCSharp {
 				case "System.DateTime":
 					return "DateTime";
 				default:
-					throw new ApplicationException("Unrecognized CLR type code passed to TypeConvertor: " + clrTypeCode);
+					Console.WriteLine("Warning: Unrecognized CLR type code passed to TypeConvertor: " + clrTypeCode);
+					return null;
+					// throw new ApplicationException("Unrecognized CLR type code passed to TypeConvertor: " + clrTypeCode);
 			}
 		}
 

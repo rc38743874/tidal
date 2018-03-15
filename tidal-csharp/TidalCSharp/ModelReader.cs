@@ -27,7 +27,8 @@ namespace TidalCSharp {
 				
 						string typeCode = info.PropertyType.Name;
 						if (info.PropertyType.Namespace != requiredNamespace) {
-							typeCode = TypeConvertor.ConvertCLRToVernacular(info.PropertyType.ToString());
+							string vernacularCode = TypeConvertor.ConvertCLRToVernacular(info.PropertyType.ToString());
+							if (vernacularCode != null) typeCode = vernacularCode;
 						}
 
 						bool isReference = info.PropertyType.IsClass;
