@@ -13,8 +13,7 @@ namespace TidalCSharp {
 			buildText.AppendLine("using System.Data;");
 			buildText.AppendLine("using System.Linq;");
 			buildText.AppendLine("using System.Web;");
-			buildText.AppendLine("using MicrosoftSQL.Data;");
-			buildText.AppendLine("using MicrosoftSQL.Data.MicrosoftSQLClient;");
+			buildText.AppendLine("using System.Data.SqlClient;");
 
 			if (modelNamespace != "Models") {
 				buildText.AppendLine("using Models = " + modelNamespace + ";");
