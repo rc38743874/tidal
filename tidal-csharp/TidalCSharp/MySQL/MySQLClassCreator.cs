@@ -266,8 +266,12 @@ namespace TidalCSharp {
 				}
 				else {
 					buildText.Append("\t\t\t\t\tcommand.Parameters.Add(new MySqlParameter(\"" + parameterDef.ParameterName + "\", " + argumentDef.ArgumentName);
-					/* TODO: Find out whether we need to turn nulls into DBNull.Value, I can't recall */
-	//				if (argumentDef.IsNullable == true) buildText.Append(" ?? DBNull.Value");
+					if (argumentDef.IsNullable == true) {
+						buildText.Append("(object) " + argumentDef.ArgumentName + " ?? DBNull.Value");
+					}
+					else {
+						buildText.Append(argumentDef.ArgumentName);
+					}					
 					buildText.AppendLine("));");
 				}
 			}

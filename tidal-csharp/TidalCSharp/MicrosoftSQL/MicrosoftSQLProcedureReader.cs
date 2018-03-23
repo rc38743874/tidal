@@ -179,7 +179,7 @@ namespace TidalCSharp {
 							Precision = (ulong?)precision,
 							Scale = scale,
 							OrdinalPosition = (int)parameterRow["ORDINAL_POSITION"],
-							IsOutParameter = parameterRow["PARAMETER_MODE"].ToString() == "OUT"
+							IsOutParameter = parameterRow["PARAMETER_MODE"].ToString() == "INOUT"
 						};
 
 						procedureDef.ParameterDefMap[parameterName] = parameterDef;

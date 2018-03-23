@@ -66,6 +66,7 @@ namespace TidalCSharp {
 					string typeCode = TypeConvertor.ConvertNullableSQLToCSharp(parameterDef.ParameterDataTypeCode, parameterDef.IsNullable);
 
 					if (parameterDef.IsOutParameter == true) {
+
 						if (functionDef.ReturnTypeCode != null) {
 							throw new ApplicationException("Stored procedure " + procedureDef.ProcedureName + " returns row data but also has an out parameter: " + parameterDef.ParameterName);
 						}

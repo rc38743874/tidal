@@ -108,6 +108,19 @@ namespace TidalCSharp {
                         /* read object model */
                         Dictionary<string, ModelDef> modelDefMap = ModelReader.ReadFromFile(tidalOptions.ModelsAssemblyFileName, tidalOptions.ModelsNamespace);
 
+						/* DEBUG temp */
+						foreach (var model in modelDefMap.Values) {
+							Console.WriteLine(model.ModelName);
+							Console.WriteLine("Properties:");
+							foreach (var prop in model.PropertyDefMap.Values) {
+								Console.WriteLine("\t" + prop.PropertyName);
+							}
+							Console.WriteLine("Fields:");
+							foreach (var fld in model.FieldDefMap.Values) {
+								Console.WriteLine("\t" + fld.FieldName);
+							}
+						}
+
                         Console.WriteLine("calcing stored proc script");
                         IProcedureCreator procCreator = processor.GetProcedureCreator();
                         string text = procCreator.GetStoredProcedureScriptText(tidalOptions.ModuleName, tableDefList, 1);

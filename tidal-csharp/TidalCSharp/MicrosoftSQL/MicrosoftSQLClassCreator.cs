@@ -31,8 +31,8 @@ namespace TidalCSharp {
 			buildText.AppendLine("");
 			buildText.AppendLine("");
 			buildText.AppendLine("\t\t/* Helper functions */");
-			buildText.AppendLine("\t\tpublic static SqlCommand GetCommand(SqlConnection conn, string procedureName) {");
-			buildText.AppendLine("\t\t\treturn new SqlCommand(procedureName, conn) { CommandType = CommandType.StoredProcedure };");
+			buildText.AppendLine("\t\tpublic static SqlCommand GetCommand(SqlConnection conn, SqlTransaction trans, string procedureName) {");
+			buildText.AppendLine("\t\t\treturn new SqlCommand(procedureName, conn, trans) { CommandType = CommandType.StoredProcedure };");
 			buildText.AppendLine("\t\t}");
 			buildText.AppendLine("");
 			buildText.AppendLine("");
@@ -121,7 +121,7 @@ namespace TidalCSharp {
 			if (functionDef.ReturnTypeCode != null) {
 				buildText.Append("return ");
 			}
-			buildText.AppendLine(modelDef.ModelName + "." + functionDef.FunctionName + "(conn,");
+			buildText.AppendLine(modelDef.ModelName + "." + functionDef.FunctionName + "(conn, trans,");
 			AddFunctionArguments(buildText, modelDef, functionDef);
 
 			buildText.AppendLine("\t\t\t}");
@@ -184,7 +184,7 @@ namespace TidalCSharp {
 			/* e.g. Read from object */
 			AddFunctionDeclaration(buildText, functionDef);
 			AddObjectArgument(buildText, modelDef);
-			buildText.AppendLine("\t\t\t\treturn " + modelDef.ModelName + "." + functionDef.FunctionName + "(conn,");
+			buildText.AppendLine("\t\t\t\treturn " + modelDef.ModelName + "." + functionDef.FunctionName + "(conn, trans,");
 			AddFunctionArguments(buildText, modelDef, functionDef);
 			buildText.AppendLine("\t\t\t}");
 		}
@@ -199,7 +199,7 @@ namespace TidalCSharp {
 			}
 			
 			if (functionDef.OutputsList) code = "List<" + code + ">";
-			buildText.Append("\t\t\tpublic static " + code + " " + functionDef.FunctionName + "(SqlConnection conn");
+			buildText.Append("\t\t\tpublic static " + code + " " + functionDef.FunctionName + "(SqlConnection conn, SqlTransaction trans");
 		}
 
 		public void AddArguments(StringBuilder buildText, FunctionDef functionDef) {
@@ -231,25 +231,36 @@ namespace TidalCSharp {
 				buildText.Append("\t\t\t\t\t\t");
 				PropertyDef propertyDef = argumentDef.PropertyDef;
 
+				// DEBUG
 				if (propertyDef == null) {
+					Console.WriteLine(functionDef.FunctionName);
+					Console.WriteLine(functionDef.ProcedureDef.ProcedureName);
+					Console.WriteLine(functionDef.ProcedureDef.TableDef.TableName);
+					Console.WriteLine("Candidates (" + functionDef.ProcedureDef.TableDef.FieldDefList.Count + "):");
+					foreach (var fieldDef in  functionDef.ProcedureDef.TableDef.FieldDefList) {
+						Console.WriteLine("Field " + fieldDef.FieldName);
+					}
 					throw new ApplicationException("Argument " + argumentDef.ArgumentName + " in function " + functionDef.FunctionName + " for " + functionDef.ProcedureDef.ProcedureName + " had a null PropertyDef.  Does the primary key column exist as a field in the model class?");
 				}
-
-				if (propertyDef.IsReference) {
-					Console.WriteLine("5");
-					string subPropertyName = propertyDef.PropertyName;
-					if (argumentDef.ArgumentName.EndsWith("Key")) {
-						subPropertyName = propertyDef.PropertyTypeCode + "ID";
-					}
-					if (argumentDef.IsNullable) {
-						buildText.Append("(inputObject." + propertyDef.PropertyName + " == null) ? (" + argumentDef.ArgumentTypeCode + "?)null : inputObject." + propertyDef.PropertyName + "." + subPropertyName);
+				if (propertyDef != null) {
+					if (propertyDef.IsReference) {
+						string subPropertyName = propertyDef.PropertyName;
+						if (argumentDef.ArgumentName.EndsWith("Key")) {
+							subPropertyName = propertyDef.PropertyTypeCode + "ID";
+						}
+						if (argumentDef.IsNullable) {
+							buildText.Append("(inputObject." + propertyDef.PropertyName + " == null) ? (" + argumentDef.ArgumentTypeCode + "?)null : inputObject." + propertyDef.PropertyName + "." + subPropertyName);
+						}
+						else {
+							buildText.Append("inputObject." + propertyDef.PropertyName + "." + subPropertyName);
+						}
 					}
 					else {
-						buildText.Append("inputObject." + propertyDef.PropertyName + "." + subPropertyName);
+						buildText.Append("inputObject." + propertyDef.PropertyName);
 					}
 				}
 				else {
-					buildText.Append("inputObject." + propertyDef.PropertyName);
+					buildText.Append(argumentDef.ArgumentName);
 				}
 
 			}
@@ -257,7 +268,7 @@ namespace TidalCSharp {
 		}
 
 		public void AddUsingCommand(StringBuilder buildText, ProcedureDef procedureDef) {
-			buildText.AppendLine("\t\t\t\tusing (var command = DataAccess.GetCommand(conn, \"" + procedureDef.ProcedureName + "\")) {");
+			buildText.AppendLine("\t\t\t\tusing (var command = DataAccess.GetCommand(conn, trans, \"" + procedureDef.ProcedureName + "\")) {");
 		}
 
 		public void AddCommandParameters(StringBuilder buildText, FunctionDef functionDef) {
@@ -265,13 +276,17 @@ namespace TidalCSharp {
 	//		foreach (ArgumentDef argumentDef in functionDef.ArgumentDefList) {
 				ArgumentDef argumentDef = parameterDef.ArgumentDef;
 				if (parameterDef.IsOutParameter == true) {
-					buildText.AppendLine("\t\t\t\t\tvar outParameter = new SqlParameter { ParameterName = \"" + parameterDef.ParameterName + "\", Direction = ParameterDirection.Output, Size = " + parameterDef.ParameterSize + ", MicrosoftSQLDbType = MicrosoftSQLDbType." + GetMicrosoftSQLDbTypeCode(parameterDef.ParameterDataTypeCode) + " };"); /* SqlDbType.Int */
+					buildText.AppendLine("\t\t\t\t\tvar outParameter = new SqlParameter { ParameterName = \"" + parameterDef.ParameterName + "\", Direction = ParameterDirection.Output, Size = " + parameterDef.ParameterSize + ", SqlDbType = SqlDbType." + GetSqlDbTypeCode(parameterDef.ParameterDataTypeCode) + " };"); /* SqlDbType.Int */
 					buildText.AppendLine("\t\t\t\t\tcommand.Parameters.Add(outParameter);");
 				}
 				else {
-					buildText.Append("\t\t\t\t\tcommand.Parameters.Add(new SqlParameter(\"" + parameterDef.ParameterName + "\", " + argumentDef.ArgumentName);
-					/* TODO: Find out whether we need to turn nulls into DBNull.Value, I can't recall */
-	//				if (argumentDef.IsNullable == true) buildText.Append(" ?? DBNull.Value");
+					buildText.Append("\t\t\t\t\tcommand.Parameters.Add(new SqlParameter(\"" + parameterDef.ParameterName + "\", " );
+					if (argumentDef.IsNullable == true) {
+						buildText.Append("(object) " + argumentDef.ArgumentName + " ?? DBNull.Value");
+					}
+					else {
+						buildText.Append(argumentDef.ArgumentName);
+					}
 					buildText.AppendLine("));");
 				}
 			}
@@ -373,12 +388,17 @@ namespace TidalCSharp {
 			buildText.AppendLine();
 		}
 		
-		private string GetMicrosoftSQLDbTypeCode (string inputCode) {
+		/* very different from MySQL I think */
+		private string GetSqlDbTypeCode (string inputCode) {
 			switch (inputCode) {
 				case "bigint":
-					return "Int64";
+					return "BigInt";
 				case "int":
-					return "Int32";
+					return "Int";
+				case "tinyint":
+					return "TinyInt";
+				case "smallint":
+					return "SmallInt";
 				default:
 					throw new ApplicationException("Unknown input code for GetSqlDbTypeCode: " + inputCode);
 			}
