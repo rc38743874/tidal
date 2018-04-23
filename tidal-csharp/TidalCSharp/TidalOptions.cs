@@ -32,6 +32,9 @@ namespace TidalCSharp {
 		public bool Verbose { get; set; }
 		public bool ShouldShowHelp { get; set; }
 
+		public bool ShouldMakeTableDefMap { get; set; }
+		public bool ShouldMakeProcedureDefList { get; set; }
+
 		public TidalOptions() {
 			this.optionSet = new OptionSet { 
 				{ "o|out=", "path/filename of the generated code DataAccess class.", o => this.DataAccessFileNameOut = o}, 
@@ -64,37 +67,161 @@ namespace TidalCSharp {
 		public bool BuildFromArguments(string[] args) {
 			List<string> extraCommandList;
 			try {
-				extraCommandList = this.optionSet.Parse (args);
+				extraCommandList = this.optionSet.Parse(args);
 
-			} catch (OptionException e) {
-				Console.WriteLine (e.Message);
-				Console.WriteLine ("Try 'tidal-csharp.exe --help' for more information.");
+			}
+			catch (OptionException e) {
+				Console.WriteLine(e.Message);
+				Console.WriteLine("Try 'tidal-csharp.exe --help' for more information.");
 				return false;
 			}
 
-			
+
 
 			if (this.ShouldShowHelp == true) {
-				Console.WriteLine ("Usage: tidal-csharp.exe database-type [OPTIONS]");
-				Console.WriteLine ("Create a DataAccess.cs class in C#, and/or intermediate definition files.");
-				Console.WriteLine ();
+				Console.WriteLine("Usage: tidal-csharp.exe database-type [OPTIONS]");
+				Console.WriteLine("Create a DataAccess.cs class in C#, and/or intermediate definition files.");
+				Console.WriteLine();
 
 
-				Console.WriteLine ("database-type:");
+				Console.WriteLine("database-type:");
 				Console.WriteLine("\tmssql: Microsoft SQL Server");
 				Console.WriteLine("\tmysql: MySQL");
 
 				// output the options
-				Console.WriteLine ("Options:");
-				this.optionSet.WriteOptionDescriptions (Console.Out);
+				Console.WriteLine("Options:");
+				this.optionSet.WriteOptionDescriptions(Console.Out);
 
 				Console.WriteLine("Examples:");
 				Console.WriteLine("tidal-csharp.exe mssql [OPTIONS]");
 				return false;
 			}
 
+			this.ShouldMakeProcedureDefList = false;
+			List<string> tableDefRequirerList = new List<string>();
+			bool wasOkay = true;
+			// bool tableDefMapRequired = false;
+			// bool moduleNameRequired = false;
+
+			// bool hasCorrectDatabaseInputs = false;
+			/* first step in the chain is reading table defs from either a file or database
+			 * 		if we set TableDefFileNameIn, then we are reading from a file
+			 * 		if we set TableDefFileNameOut, then we are reading from a db, and exporting to that file
+			 * 		if we set neither, then we will read from the database, but not write out to a file
+			 * 		if we set both, it's an error 
+			 
+			 */
+			if (this.TableDefFileNameOut != null && this.TableDefFileNameIn != null) {
+				/* TODO: if we set both, perhaps it should check the two against each other? */
+				wasOkay = false;
+				Console.WriteLine("Cannot use a table schema definition input file and a table schema definition output file simultaneously.  Please use either -t or -T exclusively.");
+			}
+
+			/* this side track provides a table drop script for convenience.
+			 * 	this is switched on if there is a TableDropScriptFileName provided.
+			 * 	it requires a tableDefMap, either from file or DB
+			 */
+			if (this.TableDropScriptFileName != null) {
+				tableDefRequirerList.Add("-B");
+			}
+
+			/* this side track provides a table create script for convenience.
+			 * 	this is switched on if there is a TableCreateScriptFileName provided.
+			 * 	it requires a tableDefMap, either from file or DB
+			 */
+			if (this.TableCreateScriptFileName != null) {
+				tableDefRequirerList.Add("-b");
+			}
+
+
+			/* Write .cs model files if desired.
+			 * this is switched by ModelsPathOut being provided
+			 * it requires a tableDefMap, either from file or DB
+			 */
+			if (this.ModelsPathOut != null) {
+				tableDefRequirerList.Add("-m");
+				if (this.ModelsNamespace == null) {
+					wasOkay = false;
+					Console.WriteLine("Writing models out with the -m option requires a models namespace to be specified using -N.");
+				}
+			}
+
+			if (this.SQLScriptFileNameOut != null) {
+				if (this.SQLScriptFileNameIn != null) {
+					wasOkay = false;
+					Console.WriteLine("Cannot use a .sql script input file and a .sql script output file simultaneously.  Please use either -q or -Q exclusively.");
+				}
+
+				if (this.ModuleName != null) {
+					wasOkay = false;
+					Console.WriteLine("Option -q to write out a stored procedure script requires a module name specified by -u.");
+				}
+				tableDefRequirerList.Add("-q");
+
+			}
+
+			if (this.CreateProcedures == true) {
+				if (this.SQLScriptFileNameIn == null) {
+					tableDefRequirerList.Add("-Q");
+				}
+				if (this.ConnectionString == null) {
+					wasOkay = false;
+					Console.WriteLine("Automatically creating procedures with -c requires a database connection specified by -C.");					
+				}
+			}
+
+			if (this.StoredProcDefFileNameOut != null) {
+				tableDefRequirerList.Add("-s");
+				if (this.ModuleName != null) {
+					wasOkay = false;
+					Console.WriteLine("Option -s to write out stored procedure parameter definitions .json file requires a module name specified by -u.");
+				}
+			}
+
+
+			if (tableDefRequirerList.Count == 0) {
+				this.ShouldMakeTableDefMap = false;
+			}
+			else {
+				this.ShouldMakeTableDefMap = true;
+				if (this.ConnectionString == null
+				    && this.TableDefFileNameIn == null) {
+					wasOkay = false;
+
+					string paramsNeeding = "";
+					if (tableDefRequirerList.Count == 1) {
+						paramsNeeding = "Parameter " + tableDefRequirerList[0] + " requires";
+					}
+					else {
+						paramsNeeding = "Parameters " + String.Join(", ", tableDefRequirerList.ToArray()) + " require";
+					}
+
+					/* TODO: may want a list of parameters that are causing a tableDefMapRequired */
+					Console.WriteLine(paramsNeeding + " reading table schema definitions either directly from the database specified using -C, or a static .json file using -T.");
+				}
+			}
+
+			if (this.RemoveProcedures == true) {
+				if (this.ConnectionString == null) {
+					wasOkay = false;
+
+					/* TODO: may want a list of parameters that are causing a tableDefMapRequired */
+					Console.WriteLine("Removing procedures with -r requires a database connection specified by -C.");					
+				}
+			}
+
+			if (this.DataAccessFileNameOut != null) {
+				this.ShouldMakeProcedureDefList = true;
+				if (this.ProjectNamespace  ==  null) {
+					wasOkay = false;
+					Console.WriteLine ("Option -o to output a DataAccess file requires a project namespace to be specified with -n.");
+				}
+
+			}
+
+
 			if (extraCommandList.Count == 0) {
-				Console.WriteLine("Database type argument required but not found.");
+				Console.WriteLine("Database type argument (mssql or mysql) required but not found.");
 				Console.WriteLine("Try 'tidal-csharp.exe --help' for more information.");
 				return false;
 			}
@@ -119,41 +246,14 @@ namespace TidalCSharp {
 				return false;
 			}
 
-			bool wasOkay = true;
 			if (this.StoredProcDefFileNameOut != null && this.StoredProcDefFileNameIn != null) {
 				wasOkay = false;
-				Console.WriteLine ("Cannot use a stored procedure definition input file and a stored procedure definition output file simultaneously.  Please use either -s or -S exclusively.");
-			}
-
-			if (this.SQLScriptFileNameOut != null && this.SQLScriptFileNameIn != null) {
-				wasOkay = false;
-				Console.WriteLine ("Cannot use a .sql script input file and a .sql script output file simultaneously.  Please use either -q or -Q exclusively.");
-			}
-
-
-			if (this.TableDefFileNameOut != null && this.TableDefFileNameIn != null) {
-				wasOkay = false;
-				Console.WriteLine ("Cannot use a table schema definition input file and a table schema definition output file simultaneously.  Please use either -t or -T exclusively.");
+				Console.WriteLine("Cannot use a stored procedure definition input file and a stored procedure definition output file simultaneously.  Please use either -s or -S exclusively.");
 			}
 
 			if (this.ModelDefFileNameIn != null && this.ModelDefFileNameOut != null) {
 				wasOkay = false;
-				Console.WriteLine ("Cannot use a model descriptions input file and a model descriptions output file simultaneously.  Please use either -d or -D exclusively.");
-			}
-
-
-			if (this.ModelsPathOut != null) {
-				/* TODO: validate it is a valid path */
-			}
-
-			if (this.RemoveProcedures == true && this.ConnectionString == null) {
-				wasOkay = false;
-				Console.WriteLine ("Option -r or --removeproc to remove previous Tidal stored procedures automatically requires a connection string (-C or --conn).");
-			}
-
-			if (this.CreateProcedures == true && this.ConnectionString == null) {
-				wasOkay = false;
-				Console.WriteLine ("Option -c or --createproc to create Tidal stored procedures automatically requires a connection string (-C or --conn).");
+				Console.WriteLine("Cannot use a model descriptions input file and a model descriptions output file simultaneously.  Please use either -d or -D exclusively.");
 			}
 
 			if (this.PasswordPrompt == true && this.ConnectionString == null) {
@@ -166,35 +266,12 @@ namespace TidalCSharp {
 				Console.WriteLine ("Option -P or --password to supply a password requires a connection string (-C or --conn).");
 			}
 
-			if (this.ModelsNamespace ==  null) {
-				/* TODO: not all commands may need this? */
+			if (this.ConnectionString != null && this.Password == null && this.PasswordPrompt == false) {
 				wasOkay = false;
-				Console.WriteLine ("Option -N or --modelsns to supply a models namespace is required.");
+				Console.WriteLine("A connection specified by -C requires either a password with -P or a password prompt with -p.");
 			}
 
-			if (this.ModelsAssemblyFileName  ==  null) {
-				/* TODO: not all commands may need this? */
-				wasOkay = false;
-				Console.WriteLine ("Option -a or --modelsdll to specify an assembly file containing models is required.");
-			}
 
-			if (this.ModuleName  ==  null) {
-				/* TODO: not all commands may need this? */
-				wasOkay = false;
-				Console.WriteLine ("Option -u or --modulename to specify the module name to use when referring to stored procedures is required.");
-			}
-
-			if (this.ProjectNamespace  ==  null && this.DataAccessFileNameOut!=null) {
-				/* TODO: not all commands may need this? */
-				wasOkay = false;
-				Console.WriteLine ("Option -n or --namespace to specify the namespace for the output DataAccess class is required.");
-			}
-			
-			if (this.DataAccessFileNameOut == null) {
-				wasOkay = false;
-				Console.WriteLine ("Option -o or --out to specify the output file for DataAccess class is required.");
-			}
-			
 			return wasOkay;
 
 		}

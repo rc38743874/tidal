@@ -32,7 +32,8 @@ namespace TidalCSharp {
                     //                IProcessor processor = new MySQLProcessor();
                     Console.WriteLine("creating processor");
 
-					IProcessor processor;
+
+					IProcessor processor = null;
 					switch (tidalOptions.DatabaseType) {
 						case DatabaseTypeEnum.mssql:
 							processor = new MicrosoftSQLProcessor();
@@ -40,114 +41,127 @@ namespace TidalCSharp {
 						case DatabaseTypeEnum.mysql:
 							processor = new MySQLProcessor();
 							break;
-						default:
-							throw new ApplicationException("Database type was not specified: " + tidalOptions.DatabaseType);
 					}
                     Console.WriteLine("creating connection string");
 
-                    DbConnectionStringBuilder dbcs = new DbConnectionStringBuilder();
-                    dbcs.ConnectionString = tidalOptions.ConnectionString;
-                    Console.WriteLine("checking for database name");
-					string databaseName;
-					if (dbcs.ContainsKey("database")) {
-						databaseName = (string)dbcs["database"];
-					}
-					else {
-						if (dbcs.ContainsKey("Initial Catalog")) {
-							databaseName = (string)dbcs["Initial Catalog"];
+					DbConnection conn = null;
+					string databaseName = null;
+					if (tidalOptions.ConnectionString != null) {
+						DbConnectionStringBuilder dbcs = new DbConnectionStringBuilder();
+						dbcs.ConnectionString = tidalOptions.ConnectionString;
+						Console.WriteLine("checking for database name");
+						if (dbcs.ContainsKey("database")) {
+							databaseName = (string)dbcs["database"];
 						}
 						else {
-							throw new ApplicationException("A database name is required in the connection string.  Please use either Database=VALUE or Initial Catalog=VALUE.");
+							if (dbcs.ContainsKey("Initial Catalog")) {
+								databaseName = (string)dbcs["Initial Catalog"];
+							}
+							else {
+								throw new ApplicationException("A database name is required in the connection string.  Please use either Database=VALUE or Initial Catalog=VALUE.");
+							}
 						}
+
+						Console.WriteLine("making connection");
+						conn = processor.GetConnection(tidalOptions.ConnectionString, tidalOptions.Password);
 					}
 
-                    Console.WriteLine("making connection");
-                    using (DbConnection conn = processor.GetConnection(tidalOptions.ConnectionString, tidalOptions.Password)) {
-                        Console.WriteLine("opening connection");
-                        conn.Open();
+					using (conn) {
+						if (conn != null) {
+							Console.WriteLine("opening connection");
+							conn.Open();
+						}
 
-                        Console.WriteLine("getting table extractor");
-                        /* TODO: selectively do/skip these based on options */
-                        ITableExtractor extractor = processor.GetTableExtractor();
+						List<TableDef> tableDefList = null;
+						TableDefMap tableDefMap = null;
 
-                        Console.WriteLine("extracting table data with " + extractor.GetType());
-                        TableDefMap tableDefMap = extractor.ExtractTableData();
-
-                        if (tidalOptions.TableDefFileNameOut != null) {
-                            Console.WriteLine("writing table def file");
-                            File.WriteAllText(tidalOptions.TableDefFileNameOut, tableDefMap.ToJSONString());
-
-                        }
+						if (tidalOptions.ShouldMakeTableDefMap == true) {
 
 
-                        if (tidalOptions.TableCreateScriptFileName != null) {
-                            Console.WriteLine("writing create table script");
-                            ITableScriptWriter creationWriter = processor.GetTableScriptWriter();
-                            string tableCreationScriptText = creationWriter.GetTableCreateScriptText(databaseName, tableDefMap.Values.ToList<TableDef>());
-                            File.WriteAllText(tidalOptions.TableCreateScriptFileName, tableCreationScriptText);
-                        }
 
-                        if (tidalOptions.TableDropScriptFileName != null) {
-                            Console.WriteLine("writing drop table script");
-                            ITableScriptWriter dropWriter = processor.GetTableScriptWriter();
-                            string tableCreationScriptText = dropWriter.GetTableDropScriptText(databaseName, tableDefMap.Values.ToList<TableDef>());
-                            File.WriteAllText(tidalOptions.TableDropScriptFileName, tableCreationScriptText);
-                        }
+							Console.WriteLine("getting table extractor");
 
-                        List<TableDef> tableDefList = tableDefMap.Values.ToList<TableDef>();
+							ITableExtractor extractor = processor.GetTableExtractor();
 
-                        if (tidalOptions.ModelsPathOut != null) {
-                            Console.WriteLine("making models");
-                            ModelCreator.MakeModels(tableDefList, tidalOptions.ModelsNamespace, tidalOptions.ModelsPathOut);
-                        }
+							if (tidalOptions.ShouldMakeTableDefMap == true) {
+								Console.WriteLine("extracting table data with " + extractor.GetType());
+								tableDefMap = extractor.ExtractTableData();
 
-						
+								if (tidalOptions.TableDefFileNameOut != null) {
+									Console.WriteLine("writing table def file");
+									File.WriteAllText(tidalOptions.TableDefFileNameOut, tableDefMap.ToJSONString());
 
-
-						Console.WriteLine("reading models");
-                        /* read object model */
-                        Dictionary<string, ModelDef> modelDefMap = ModelReader.ReadFromFile(tidalOptions.ModelsAssemblyFileName, tidalOptions.ModelsNamespace);
-
-						/* DEBUG temp */
-						foreach (var model in modelDefMap.Values) {
-							Console.WriteLine(model.ModelName);
-							Console.WriteLine("Properties:");
-							foreach (var prop in model.PropertyDefMap.Values) {
-								Console.WriteLine("\t" + prop.PropertyName);
+								}
 							}
-							Console.WriteLine("Fields:");
-							foreach (var fld in model.FieldDefMap.Values) {
-								Console.WriteLine("\t" + fld.FieldName);
+
+							tableDefList = tableDefMap.Values.ToList<TableDef>();
+
+							if (tidalOptions.TableCreateScriptFileName != null) {
+								Console.WriteLine("writing create table script");
+								ITableScriptWriter creationWriter = processor.GetTableScriptWriter();
+								string tableCreationScriptText = creationWriter.GetTableCreateScriptText(databaseName, tableDefList);
+								File.WriteAllText(tidalOptions.TableCreateScriptFileName, tableCreationScriptText);
+							}
+
+							if (tidalOptions.TableDropScriptFileName != null) {
+								Console.WriteLine("writing drop table script");
+								ITableScriptWriter dropWriter = processor.GetTableScriptWriter();
+								string tableCreationScriptText = dropWriter.GetTableDropScriptText(databaseName, tableDefList);
+								File.WriteAllText(tidalOptions.TableDropScriptFileName, tableCreationScriptText);
+							}
+
+							if (tidalOptions.ModelsPathOut != null) {
+								Console.WriteLine("making models");
+								ModelCreator.MakeModels(tableDefList, tidalOptions.ModelsNamespace, tidalOptions.ModelsPathOut);
 							}
 						}
 
-                        Console.WriteLine("calcing stored proc script");
-                        IProcedureCreator procCreator = processor.GetProcedureCreator();
-                        string text = procCreator.GetStoredProcedureScriptText(tidalOptions.ModuleName, tableDefList, 1);
+						Dictionary<string, ModelDef> modelDefMap = null;
 
-                        // Console.WriteLine(text);
-                        if (tidalOptions.SQLScriptFileNameOut != null) {
+						/* TODO: allow create model by only reading database */
+						if (tidalOptions.ModelsAssemblyFileName != null) {
+							Console.WriteLine("reading models from assembly");
+							/* read object model */
+							modelDefMap = ModelReader.ReadFromFile(tidalOptions.ModelsAssemblyFileName, tidalOptions.ModelsNamespace);
+						}
 
-                            Console.WriteLine("writing stored proc script file");
-                            File.WriteAllText(tidalOptions.SQLScriptFileNameOut, text);
-                        }
-
-
-                        Console.WriteLine("removing old procedures");
-                        /* remove Tidal generated procedures for this module (in case the tables are gone, e.g.) */
-                        IProcedureRemover procRemover = processor.GetProcedureRemover();
-                        procRemover.RemoveTidalStoredProcs(databaseName, tidalOptions.ModuleName);
+						/* if we will create stored procs */
+						if (tidalOptions.ModuleName != null) {
+							Console.WriteLine("calcing stored proc script");
+							IProcedureCreator procCreator = processor.GetProcedureCreator();
+							string storedProcedureSQLText = procCreator.GetStoredProcedureScriptText(tidalOptions.ModuleName, tableDefList, 1);
 
 
-                        Console.WriteLine("executing stored proc script");
-                        /* execute Tidal sql script */
-                        IScriptExecutor scriptExecutor = processor.GetScriptExecutor();
-                        scriptExecutor.ExecuteTidalProcedureScript(text);
+							// Console.WriteLine(storedProcedureSQLText);
+							if (tidalOptions.SQLScriptFileNameOut != null) {
 
-                        Console.WriteLine("absorbing stored proc definitions");
-                        /* read stored procedures and generate stored procedure defs */
-                        IProcedureReader procReader = processor.GetProcedureReader();
-                        List<ProcedureDef> procedureDefList = procReader.MakeProcedureDefList(databaseName, tidalOptions.ModuleName, tableDefMap);
+								Console.WriteLine("writing stored proc script file");
+								File.WriteAllText(tidalOptions.SQLScriptFileNameOut, storedProcedureSQLText);
+							}
+
+
+
+							Console.WriteLine("removing old procedures");
+							/* remove Tidal generated procedures for this module (in case the tables are gone, e.g.) */
+							IProcedureRemover procRemover = processor.GetProcedureRemover();
+							procRemover.RemoveTidalStoredProcs(databaseName, tidalOptions.ModuleName);
+
+
+							Console.WriteLine("executing stored proc script");
+							/* execute Tidal sql script */
+							IScriptExecutor scriptExecutor = processor.GetScriptExecutor();
+							scriptExecutor.ExecuteTidalProcedureScript(storedProcedureSQLText);
+
+						}
+
+						List<ProcedureDef> procedureDefList = null;
+						if (tidalOptions.ShouldMakeProcedureDefList == true) {
+							Console.WriteLine("absorbing stored proc definitions");
+
+							/* read stored procedures and generate stored procedure defs */
+							IProcedureReader procReader = processor.GetProcedureReader();
+							procedureDefList = procReader.MakeProcedureDefList(databaseName, tidalOptions.ModuleName, tableDefMap);
+						}
 
 						if (tidalOptions.StoredProcDefFileNameOut != null) {
 							Console.WriteLine("writing stored proc definition json file");
@@ -161,16 +175,20 @@ namespace TidalCSharp {
 							File.WriteAllText(tidalOptions.StoredProcDefFileNameOut, sbSPJson.ToString());
 						}
 
-                        /* convert the procedures, parameters, and outputs into function calls and arguments */
-                        List<ModelDef> modelDefList = FunctionCreator.CreateModelDefList(tidalOptions.ModelsNamespace, tidalOptions.ModuleName, modelDefMap, procedureDefList);
 
-                        /* combine with stored proc defs to create DataAccess class */
-                        IClassCreator classCreator = processor.GetClassCreator();
-                        string classText = classCreator.GetDataAccessClassText(tidalOptions.ProjectNamespace, tidalOptions.ModelsNamespace, modelDefList);
+						if (tidalOptions.DataAccessFileNameOut != null) {
+							/* convert the procedures, parameters, and outputs into function calls and arguments */
+							List<ModelDef> modelDefList = FunctionCreator.CreateModelDefList(tidalOptions.ModelsNamespace, tidalOptions.ModuleName, modelDefMap, procedureDefList);
 
-                        File.WriteAllText(tidalOptions.DataAccessFileNameOut, classText);
+							/* combine with stored proc defs to create DataAccess class */
+							IClassCreator classCreator = processor.GetClassCreator();
+							string classText = classCreator.GetDataAccessClassText(tidalOptions.ProjectNamespace, tidalOptions.ModelsNamespace, modelDefList);
 
-                        conn.Close();
+							File.WriteAllText(tidalOptions.DataAccessFileNameOut, classText);
+						}
+
+						if (conn != null) conn.Close();
+
                     }
                 }
             }
