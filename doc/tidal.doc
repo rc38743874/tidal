@@ -1,0 +1,85 @@
+﻿
+Single tasks
+
+(intermediate tabledefmap)
+	requires either
+		reading db
+		reading .json file
+
+Extract table definitions to a file
+	requires dbtype, connstring, TableDefFileNameOut inputs
+
+
+(table definition map used for...)
+Write a create table sql script
+	requires TableCreateScriptFileName input
+	requires table definition map from
+		reading db
+			requires dbtype, connstring
+		tabledef file
+			requires TableDefFileNameIn input
+
+Write a drop table sql script
+	requires TableDropScriptFileName input
+	requires table definition map from
+		reading db
+			requires dbtype, connstring
+		tabledef file
+			requires TableDefFileNameIn input
+
+
+Write .cs model files
+	triggered by ModelsPathOut
+	requires  ModelsNamespace
+	requires table definition map intermediate
+
+
+(intermediate)
+stored procedure Tidal sql script text
+	requires ModuleName
+	requires table definition map from
+		reading db
+			requires dbtype, connstring
+		tabledef file
+			requires TableDefFileNameIn input
+
+writing stored procedure Tidal sql script
+	requires SQLScriptFileNameOut input
+
+
+Removing old tidal stored procedure from db
+	requires db connection
+	requires ModuleName input
+
+Execute Tidal stored proc script
+	requires db connection
+	requires stored procedure Tidal sql script text from
+		file: SQLScriptFileNameIn input
+		intermediate: see intermediate
+
+(intermediate)
+ModelDefMap
+	from assembly
+		requires ModelsAssemblyFileName 
+	from tabledefmap (per auto-generation)
+		see above
+
+
+(intermediate) procedureDefList
+	requires databaseName?
+	requires ModuleName input
+	requires tableDefMap (intermediate)
+
+write stored procedure definition .json file
+	requires StoredProcDefFileNameOut input
+	requires procedureDefList (intermediate)
+		
+(intermediate) functioncreator's modelDefList
+	requires ModelsNamespace, ModuleName input
+	requires procedureDefList and modelDefMap intermediates
+
+write DataAccess class
+	requires DataAccessFileNameOut, ProjectNamespace, ModelsNamespace input
+	requires modelDefList intermediate
+
+
