@@ -285,6 +285,8 @@ namespace TidalCSharp {
 				OutputDataType(scriptText, indexColumnDef);
 			}
 			// 	OUT @rowcount int
+
+			scriptText.AppendLine();
 			scriptText.AppendLine("AS");
             scriptText.Append("DELETE FROM " + CleanName(tableName));
 

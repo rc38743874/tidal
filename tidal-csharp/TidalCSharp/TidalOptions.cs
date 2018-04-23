@@ -152,7 +152,7 @@ namespace TidalCSharp {
 					Console.WriteLine("Cannot use a .sql script input file and a .sql script output file simultaneously.  Please use either -q or -Q exclusively.");
 				}
 
-				if (this.ModuleName != null) {
+				if (this.ModuleName == null) {
 					wasOkay = false;
 					Console.WriteLine("Option -q to write out a stored procedure script requires a module name specified by -u.");
 				}
@@ -172,7 +172,7 @@ namespace TidalCSharp {
 
 			if (this.StoredProcDefFileNameOut != null) {
 				tableDefRequirerList.Add("-s");
-				if (this.ModuleName != null) {
+				if (this.ModuleName == null) {
 					wasOkay = false;
 					Console.WriteLine("Option -s to write out stored procedure parameter definitions .json file requires a module name specified by -u.");
 				}
@@ -267,8 +267,9 @@ namespace TidalCSharp {
 			}
 
 			if (this.ConnectionString != null && this.Password == null && this.PasswordPrompt == false) {
-				wasOkay = false;
-				Console.WriteLine("A connection specified by -C requires either a password with -P or a password prompt with -p.");
+				/* TODO: what if the password is part of the connection string? */
+				// wasOkay = false;
+				// Console.WriteLine("A connection specified by -C requires either a password with -P or a password prompt with -p.");
 			}
 
 
