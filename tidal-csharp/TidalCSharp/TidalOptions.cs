@@ -6,7 +6,7 @@ namespace TidalCSharp {
 	public class TidalOptions {
 
 		private OptionSet optionSet;
-
+		
 		public DatabaseTypeEnum DatabaseType { get; set; }
 		public string DataAccessFileNameOut { get; set; } 
 		public string TableDefFileNameOut { get; set; }
@@ -25,8 +25,11 @@ namespace TidalCSharp {
 		public string ModelDefFileNameIn { get; set; }
 		public string ModelDefFileNameOut { get; set; }
 		public string ConnectionString { get; set; }
+
+		/* TODO: Remove ModelsNamespace if we really didn't use it */
 		public string ModelsNamespace { get; set; }
-		public string ModelsAssemblyFileName { get; set; }
+
+		public List<string> ModelsAssemblyFileNameList = new List<string> ();
 		public string ModuleName { get; set; }
 		public string ProjectNamespace { get; set; }
 		public bool Verbose { get; set; }
@@ -35,16 +38,17 @@ namespace TidalCSharp {
 		public bool ShouldMakeTableDefMap { get; set; }
 		public bool ShouldMakeProcedureDefList { get; set; }
 
-		public TidalOptions() {
-			this.optionSet = new OptionSet { 
-				{ "o|out=", "path/filename of the generated code DataAccess class.", o => this.DataAccessFileNameOut = o}, 
-				{ "t|tableout=", "path/filename to save table schema definitions.", t => this.TableDefFileNameOut = t }, 
-				{ "T|tablein=", "path/filename to read table schema definitions.", T => this.TableDefFileNameIn = T }, 
-				{ "b|tablecreatescript=", "path/filename to write out .sql table creation script ", b => this.TableCreateScriptFileName = b }, 
-                { "B|tabledropscript=", "path/filename to write out .sql table drop script ", B => this.TableDropScriptFileName = B }, 
-				{ "q|sqlout=", "path/filename to save optional copy of stored procedures.", q => this.SQLScriptFileNameOut = q }, 
+		public TidalOptions ()
+		{
+			this.optionSet = new OptionSet {
+				{ "o|out=", "path/filename of the generated code DataAccess class.", o => this.DataAccessFileNameOut = o},
+				{ "t|tableout=", "path/filename to save table schema definitions.", t => this.TableDefFileNameOut = t },
+				{ "T|tablein=", "path/filename to read table schema definitions.", T => this.TableDefFileNameIn = T },
+				{ "b|tablecreatescript=", "path/filename to write out .sql table creation script ", b => this.TableCreateScriptFileName = b },
+				{ "B|tabledropscript=", "path/filename to write out .sql table drop script ", B => this.TableDropScriptFileName = B },
+				{ "q|sqlout=", "path/filename to save optional copy of stored procedures.", q => this.SQLScriptFileNameOut = q },
 				{ "Q|sqlin=", "path/filename from which to read stored procedure creation .sql script", Q => this.SQLScriptFileNameIn = Q},
-				{ "m|makemodels=", "generate and save fresh models into this path.", m => this.ModelsPathOut = m}, 
+				{ "m|makemodels=", "generate and save fresh models into this path.", m => this.ModelsPathOut = m},
 				{ "r|removeproc", "remove existing Tidal stored procedures for this module in the database", r => this.RemoveProcedures = (r != null)},
 				{ "c|createproc", "automatically execute stored procedure script", c => this.CreateProcedures = (c != null)},
 				{ "s|storedprocout=", "path/filename to save stored procedure descriptions .json file", s => this.StoredProcDefFileNameOut = s},
@@ -55,7 +59,7 @@ namespace TidalCSharp {
 				{ "D|modelin=", "path/filename from which to read model descriptions", D => this.ModelDefFileNameIn = D},
 				{ "C|conn=", "connection string to database", C => this.ConnectionString = C},
 				{ "N|modelsns=", "models namespace for generated and/or imported models", N => this.ModelsNamespace = N},
-				{ "a|modelsdll=", "path/filename of external assembly containing models", a => this.ModelsAssemblyFileName = a},
+				{ "a|modelsdll=", "path/filename of external assembly containing models", a => this.ModelsAssemblyFileNameList.Add(a) },
 				{ "u|modulename=", "module name for tagging stored procedures", u => this.ModuleName = u},
 				{ "n|namespace=", "project namespace for output DataAccess class", n => this.ProjectNamespace = n},
 				{ "v|verbose", "verbose messages", v => this.Verbose = (v != null) },

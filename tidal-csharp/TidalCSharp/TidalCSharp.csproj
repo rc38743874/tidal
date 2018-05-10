@@ -7,8 +7,9 @@
     <OutputType>Exe</OutputType>
     <RootNamespace>TidalCSharp</RootNamespace>
     <AssemblyName>TidalCSharp</AssemblyName>
-    <TargetFrameworkVersion>v4.5.2</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.7.1</TargetFrameworkVersion>
     <TargetFrameworkProfile />
+    <ReleaseVersion>*</ReleaseVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|x86' ">
     <DebugSymbols>true</DebugSymbols>
@@ -70,7 +71,6 @@
     <Compile Include="ModelReader.cs" />
     <Compile Include="TypeConvertor.cs" />
     <Compile Include="TidalOptions.cs" />
-    <Compile Include="Interfaces\IClassCreator.cs" />
     <Compile Include="Interfaces\IProcedureCreator.cs" />
     <Compile Include="Interfaces\IProcedureReader.cs" />
     <Compile Include="Interfaces\IProcedureRemover.cs" />
@@ -108,6 +108,8 @@
     <Compile Include="Models\IndexDef.cs" />
     <Compile Include="MicrosoftSQL\DataAccess.cs" />
     <Compile Include="DatabaseTypeEnum.cs" />
+    <Compile Include="ModelWriter.cs" />
+    <Compile Include="ClassCreatorBase.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup />

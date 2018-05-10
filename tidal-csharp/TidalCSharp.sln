@@ -30,6 +30,30 @@ Global
 		$0.DotNetNamingPolicy = $1
 		$1.DirectoryNamespaceAssociation = PrefixedHierarchical
 		$0.VersionControlPolicy = $2
+		$0.TextStylePolicy = $3
+		$3.FileWidth = 80
+		$3.scope = text/x-csharp
+		$3.EolMarker = Unix
+		$0.CSharpFormattingPolicy = $4
+		$4.IndentSwitchSection = False
+		$4.NewLinesForBracesInTypes = False
+		$4.NewLinesForBracesInProperties = False
+		$4.NewLinesForBracesInAccessors = False
+		$4.NewLinesForBracesInAnonymousMethods = False
+		$4.NewLinesForBracesInControlBlocks = False
+		$4.NewLinesForBracesInAnonymousTypes = False
+		$4.NewLinesForBracesInObjectCollectionArrayInitializers = False
+		$4.NewLinesForBracesInLambdaExpressionBody = False
+		$4.NewLineForElse = False
+		$4.NewLineForCatch = False
+		$4.NewLineForFinally = False
+		$4.NewLineForMembersInObjectInit = False
+		$4.NewLineForMembersInAnonymousTypes = False
+		$4.NewLineForClausesInQuery = False
+		$4.scope = text/x-csharp
+		$4.NewLinesForBracesInMethods = False
+		$4.SpaceBeforeColonInBaseTypeDeclaration = False
 		outputpath = ~/projects/TidalCSharp/bin
+		version = *
 	EndGlobalSection
 EndGlobal

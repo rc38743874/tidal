@@ -194,6 +194,8 @@ namespace TidalCSharp {
 
 
 		private void PopulateFields2012(ProcedureDef procedureDef) {
+
+
 			/* pass procedureName, then a string of parameters (not necessary), and finally browserInfo must be 1 to get source table info */
 			using (SqlCommand command = new SqlCommand() {
 				CommandText = $@"SELECT FieldName=name, DataTypeCode=system_type_name, IsNullable = is_nullable, BaseTableName = source_table, BaseColumnName = source_column FROM sys.dm_exec_describe_first_result_set('{procedureDef.ProcedureName}', NULL, 1)",
@@ -208,7 +210,7 @@ namespace TidalCSharp {
 
 						string fieldName = row["FieldName"].ToString();
 						string sqlDataTypeCode = row["DataTypeCode"].ToString();
-			
+
 						/* MSSQL2012 will send a char length too, e.g. varchar(10), decimal(18,0) */
 						var match = regex.Match(sqlDataTypeCode);
 						if (match.Success) {

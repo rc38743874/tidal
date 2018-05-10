@@ -1,10 +1,12 @@
 
 using System.Collections.Generic;
+using System.Globalization;
 
 namespace TidalCSharp {
 	public class ModelDef {
 
 		public string ModelName {get; set;}
+		public string Namespace { get; set; }
 
 		public List<FunctionDef> FunctionDefList { get; set; }
 		public Dictionary<string, PropertyDef> PropertyDefMap { get; set; }
@@ -25,7 +27,7 @@ namespace TidalCSharp {
 			}
 
 			/* If a field is suffixed with Key it will be referring to the object if there is a foreign key constraint */
-			if (possiblePropertyName.EndsWith("Key")) {
+			if (possiblePropertyName.EndsWith("Key", false, CultureInfo.InvariantCulture)) {
 				possiblePropertyName = StripKeySuffix(possiblePropertyName);
 
 				if (this.PropertyDefMap.ContainsKey(possiblePropertyName)) {
@@ -38,7 +40,7 @@ namespace TidalCSharp {
 
 	/* TODO: Duplicate function */
 		private string StripKeySuffix(string name) {
-			if (name.EndsWith("Key")) {
+			if (name.EndsWith("Key", false, CultureInfo.InvariantCulture)) {
 				return name.Substring(0, name.Length-3);
 			}
 			else {

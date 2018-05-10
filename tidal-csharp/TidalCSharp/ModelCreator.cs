@@ -2,12 +2,13 @@ using System;
 using System.IO;
 using System.Text;
 using System.Collections.Generic;
+using System.Globalization;
 
 namespace TidalCSharp {
 	public class ModelCreator {
 
 		public static void MakeModels (List<TableDef> tableDefList, string namespaceText, string directory) {
-			if (directory.EndsWith(Path.DirectorySeparatorChar.ToString()) == false) {
+			if (directory.EndsWith(Path.DirectorySeparatorChar.ToString(), false, CultureInfo.InvariantCulture) == false) {
 				directory += Path.DirectorySeparatorChar;
 			}
 			foreach (var tableDef in tableDefList) {

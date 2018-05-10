@@ -27,7 +27,7 @@ namespace TidalCSharp {
 			return new MicrosoftSQLTableScriptWriter();
 		}
 		
-		public IClassCreator GetClassCreator() {
+		public ClassCreatorBase GetClassCreator() {
 			return new MicrosoftSQLClassCreator();
 		}
 		

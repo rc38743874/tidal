@@ -19,7 +19,7 @@ namespace TidalCSharp {
 				string modelName = procedureName.Substring(firstUnderscoreIndex + 1, lastUnderscoreIndex - firstUnderscoreIndex - 1);
 				string functionName = procedureName.Substring(lastUnderscoreIndex + 1);
 
-				ModelDef modelDef;
+				ModelDef modelDef = null;
 				if (modelDefMap.ContainsKey(modelName)) {
 					modelDef = modelDefMap[modelName];
 				}
@@ -29,7 +29,10 @@ namespace TidalCSharp {
 					foreach (var modelDefTest in modelDefMap.Keys) {
 						Console.WriteLine(modelDefTest);
 					}
-					throw new ApplicationException("Procedure " + procedureName + " coded for table named " + modelName + " did not have a matching model in the models collection.");
+					/* TODO: process for creating procedures without needing an underlying class */
+					/* TODO: remove hack continue */
+					continue; 
+					// throw new ApplicationException("Procedure " + procedureName + " coded for table named " + modelName + " did not have a matching model in the models collection.");
 				}
 				
 				FunctionDef functionDef = new FunctionDef {
@@ -45,7 +48,8 @@ namespace TidalCSharp {
 				if (procedureDef.OutputsRows == true) {
 					functionDef.OutputsList = true;
 					modelDef.UsesMakeObjectFunction = true;
-					functionDef.ReturnTypeCode = GetModelNamespaceText(modelNamespace) + modelDef.ModelName;
+					functionDef.ReturnTypeCode = modelDef.ModelName;
+					functionDef.ReturnTypeNamespace = modelDef.Namespace;
 					if (isSingleRow == true) { 
 						functionDef.OutputsList = false;
 						functionDef.OutputsObject = true;	
@@ -71,6 +75,7 @@ namespace TidalCSharp {
 							throw new ApplicationException("Stored procedure " + procedureDef.ProcedureName + " returns row data but also has an out parameter: " + parameterDef.ParameterName);
 						}
 						functionDef.ReturnTypeCode = typeCode;
+						functionDef.ReturnTypeNamespace = null;
 					}			
 					else {
 
@@ -112,8 +117,6 @@ namespace TidalCSharp {
 
 						PropertyDef propertyDef = modelDef.GetLikelyPropertyDef(fieldName);
 
-						
-						
 						if (propertyDef == null) {
 							if (functionDef.UsesResult == false) {
 								functionDef.UsesResult = true;

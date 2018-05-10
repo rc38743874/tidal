@@ -11,6 +11,7 @@ namespace TidalCSharp {
 		public bool OutputsObject {get; set; }
 
 		public string ReturnTypeCode { get; set; }
+		public string ReturnTypeNamespace { get; set; }
 		
 		public List<ArgumentDef> ArgumentDefList { get; set; }
 		public List<PropertyDef> OutputPropertyDefList { get; set; }

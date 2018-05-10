@@ -26,13 +26,15 @@ namespace TidalCSharp {
 			
 			string[] array = scriptText.Split(new string[] { newLineString + "GO" + newLineString }, StringSplitOptions.RemoveEmptyEntries);
 
-			foreach (string execText in array) {
-
+			for (int index = 0; index < array.Length; index ++) {
+				string execText = array[index];
+				Console.Write("Executing script command #" + (index + 1) + " of " + array.Length + "...");
 				SqlConnection conn = this.SqlConnection;
 
                 using (SqlCommand command = new SqlCommand(execText, conn)) {
                     command.ExecuteNonQuery();
                 }
+				Console.WriteLine(" complete.");
             }
 		}
 	}

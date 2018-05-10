@@ -6,63 +6,96 @@ namespace TidalCSharp {
 	
 	public class ModelReader {
 			
-		public static Dictionary<string, ModelDef> ReadFromFile (string fileName, string requiredNamespace) {
-			Dictionary<string, ModelDef> modelDefMap = new Dictionary<string, ModelDef>();
-
+		/* returns new model defs added to map */
+		public static List<ModelDef> AddToFromFile (Dictionary<string, ModelDef> modelDefMap, string fileName, string requiredNamespace) {
+			List<ModelDef> newModelDefList = new List<ModelDef> ();
+			
 			Assembly modelsAssembly = Assembly.LoadFile(fileName);
 
-		
-
 			foreach (Type modelType in modelsAssembly.GetTypes()) {
-		
-				if (modelType.Namespace == requiredNamespace) {
 
+				bool wasCompilerGenerated =
+					Attribute.GetCustomAttribute(modelType, typeof(System.Runtime.CompilerServices.CompilerGeneratedAttribute)) != null;
+
+				if (wasCompilerGenerated == false) {
+					
 					ModelDef modelDef = new ModelDef {
 						ModelName = modelType.Name,
+						Namespace = modelType.Namespace,
 						FunctionDefList = new List<FunctionDef>(),
 						PropertyDefMap = new Dictionary<string, PropertyDef>(),
-						FieldDefMap = new Dictionary<string, FieldDef>()};
+						FieldDefMap = new Dictionary<string, FieldDef>()
+					};
 
-					foreach (PropertyInfo info in modelType.GetProperties()) {
-				
-						string typeCode = info.PropertyType.Name;
-						if (info.PropertyType.Namespace != requiredNamespace) {
-							string vernacularCode = TypeConvertor.ConvertCLRToVernacular(info.PropertyType.ToString());
-							if (vernacularCode != null) typeCode = vernacularCode;
+					/* okay this is a little confusing because FieldDefMap we are using to store
+					 * fields from the stored procedure results that match those in this class.  Fields
+					 * in .NET's Reflection are all the class-level declarations that are not
+					 * properties.  For our purposes we store them both like Properties.
+					 */
+
+					foreach (FieldInfo info in modelType.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)) {
+						/* ignore private fields */
+						if ((info.Attributes & System.Reflection.FieldAttributes.Private) != System.Reflection.FieldAttributes.Private) {
+							AddMember(modelDef, info.Name, info.FieldType, requiredNamespace);
 						}
-
-						bool isReference = info.PropertyType.IsClass;
-						if (typeCode == "string") isReference = false;
-
-						PropertyDef propertyDef = new PropertyDef {
-								PropertyName = info.Name,
-								PropertyTypeCode = typeCode,
-								IsReference = isReference
-	/* TODO: better to use IsClass or IsByRef ? */
-
-						};
-
-						modelDef.PropertyDefMap[info.Name] = propertyDef;
-
-
 					}
 
-					modelDefMap[modelDef.ModelName] = modelDef;
+					foreach (PropertyInfo info in modelType.GetProperties()) {
+						AddMember(modelDef, info.Name, info.PropertyType, requiredNamespace);
+					}
 
-	//				var typeInfo = info.GetTypeInfo();
 
-	//				Console.WriteLine(typeInfo.Name);
+
+					/* if we have multiple models with the same name, only use the first one */
+					if (modelDefMap.ContainsKey(modelDef.ModelName) == false) {
+						newModelDefList.Add(modelDef);
+						modelDefMap[modelDef.ModelName] = modelDef;
+					}
+
+					//				var typeInfo = info.GetTypeInfo();
+
+					//				Console.WriteLine(typeInfo.Name);
 
 				}
 
 			}
-
-			return modelDefMap;
+			return newModelDefList;
 
 
 		}
 
+		private static void AddMember(ModelDef modelDef, string memberName, Type type, string requiredNamespace) {
+			string typeCode = type.Name;
+			if (type.Namespace != requiredNamespace) {
+				string vernacularCode = TypeConvertor.ConvertCLRToVernacular(type.ToString());
+				if (vernacularCode != null) typeCode = vernacularCode;
+			}
 
+			/* TODO: better to use IsClass or IsByRef ? */
+			bool isReference = type.IsClass || type.IsInterface;
+			if (memberName == "State") {
+				Console.WriteLine("State");
+			}
+			if (typeCode == "string") isReference = false;
+
+			/* TODO: not sure if this should rewrite the type here or not */
+			/* TODO: the Interface rewriting should be an option */
+			if (type.IsInterface && typeCode.StartsWith("I")) {
+				typeCode = typeCode.Substring(1);
+			}
+
+			PropertyDef propertyDef = new PropertyDef {
+				PropertyName = memberName,
+				PropertyTypeCode = typeCode,
+				PropertyTypeNamespace = type.Namespace,
+				IsInterface = type.IsInterface,
+				IsReference = isReference,
+				IsEnum = type.IsEnum
+			};
+
+			modelDef.PropertyDefMap[memberName] = propertyDef;
+
+		}
 
 	}
 }

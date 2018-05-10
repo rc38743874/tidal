@@ -10,7 +10,7 @@ namespace TidalCSharp {
 		
 		ITableScriptWriter GetTableScriptWriter();
 		
-        IClassCreator GetClassCreator();
+        ClassCreatorBase GetClassCreator();
 
         IProcedureCreator GetProcedureCreator();
 

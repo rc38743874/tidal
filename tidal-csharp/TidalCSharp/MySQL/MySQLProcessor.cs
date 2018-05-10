@@ -27,7 +27,7 @@ namespace TidalCSharp {
 			return new MySQLTableScriptWriter();
 		}
 		
-		public IClassCreator GetClassCreator() {
+		public ClassCreatorBase GetClassCreator() {
 			return new MySQLClassCreator();
 		}
 		
