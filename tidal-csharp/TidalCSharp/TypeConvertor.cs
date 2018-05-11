@@ -44,6 +44,7 @@ namespace TidalCSharp {
 					return "double";
 				case "smalldatetime":
 				case "datetime":
+				case "datetime2":
 					return "DateTime";
 	/*
 				case "binary":
