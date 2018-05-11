@@ -389,7 +389,7 @@ namespace TidalCSharp {
 
 				buildText.AppendLine("\t\t\t\t\tcase \"" + fieldDef.FieldName + "\":");
 
-				if (fieldDef.BaseTableName != "" && fieldDef.BaseTableName != modelDef.ModelName) {
+				if (propertyDef != null && fieldDef.BaseTableName != "" && fieldDef.BaseTableName != modelDef.ModelName) {
 
 					/* e.g. Book table has a field for AuthorName, which would be in the Author table */
 					buildText.AppendLine("\t\t\t\t\t\tif (outputObject." + propertyDef.PropertyName + " == null) {");
