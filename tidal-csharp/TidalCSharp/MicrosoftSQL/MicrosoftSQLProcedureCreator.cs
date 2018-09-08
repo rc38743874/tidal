@@ -30,14 +30,19 @@ namespace TidalCSharp {
 		private bool use2016Formatting = false;
 
 		private void OutputDataType(StringBuilder sb, ColumnDef columnDef) {
-			sb.Append(columnDef.ColumnType);
-            /* TODO: Probably shouldn't have a datalength for types like int, rather than hardcoding types here */
-            switch (columnDef.ColumnType) {
-                case "char":
-                case "varchar":
-                    if (columnDef.DataLength != null) sb.Append("(" + columnDef.DataLength + ")");
-                    break;
-            }
+			if (columnDef.ForceToBit == true) {
+				sb.Append("bit");
+			} 
+			else {
+				sb.Append(columnDef.ColumnType);
+				/* TODO: Probably shouldn't have a datalength for types like int, rather than hardcoding types here */
+				switch (columnDef.ColumnType) {
+					case "char":
+					case "varchar":
+						if (columnDef.DataLength != null) sb.Append("(" + columnDef.DataLength + ")");
+						break;
+				}
+			}
 		}
 
 		private string StripKeySuffix(string name) {
@@ -49,17 +54,20 @@ namespace TidalCSharp {
 			}
 		}
 
-		public string GetStoredProcedureScriptText(string moduleName, List<TableDef> tableDefList, int listAllLimit) {
+		public string GetStoredProcedureScriptText(string moduleName, List<TableDef> tableDefList, int listAllLimit, List<string> ignoreTableNameList) {
 			var scriptText = new StringBuilder();
 			
 			scriptText.AppendLine("/*  Tidal procedures for module: " + moduleName + " */");
 			scriptText.AppendLine("");
 			scriptText.AppendLine("");
-
-			foreach (TableDef tableDef in tableDefList) {
+			var orderedList = tableDefList.OrderBy(x => x.SchemaName != "dbo").ThenBy(x => x.SchemaName).ThenBy(x => x.TableName).ToList();
+			foreach (TableDef tableDef in orderedList) {
 				var tableName = tableDef.TableName;
+				var functionalName = GetFunctionalName(tableDef);
+				if (ignoreTableNameList.Contains(tableName)) continue;
+
 				scriptText.AppendLine("/*************************************");
-				scriptText.AppendLine("     " + tableName + " procedures");
+				scriptText.AppendLine("     " + functionalName + " procedures");
 				scriptText.AppendLine("*************************************/");
 
 				if (tableDef.TableType == "TABLE") {
@@ -149,7 +157,7 @@ namespace TidalCSharp {
 			string tableName = tableDef.TableName;
 			List<ColumnDef> columnDefList = tableDef.ColumnDefMap.Values.ToList();
 
-			string storedProcName = moduleName + "_" + tableName + "_Create";
+			string storedProcName = moduleName + "_" + GetFunctionalName(tableDef) + "_Create";
 
             OutputDIEProcedureText(scriptText, storedProcName);
             OutputCreateProcedureText(scriptText, storedProcName);
@@ -169,7 +177,7 @@ namespace TidalCSharp {
 						scriptText.AppendLine(",");
 					}
 
-                    scriptText.Append("\t@" + columnDef.ColumnName + " ");
+                    scriptText.Append("\t@" + columnDef.CleanName + " ");
 					OutputDataType(scriptText, columnDef);
 					
 				}
@@ -178,7 +186,7 @@ namespace TidalCSharp {
 			if (identityColumnDef != null) {
 				if (firstItem == false) scriptText.Append(",");
 				scriptText.AppendLine("");
-                scriptText.Append("\t@" + identityColumnDef.ColumnName + " ");
+                scriptText.Append("\t@" + identityColumnDef.CleanName + " ");
 				OutputDataType(scriptText, identityColumnDef);
                 scriptText.AppendLine(" OUT");
 			}
@@ -188,7 +196,10 @@ namespace TidalCSharp {
 
 			scriptText.AppendLine("AS");
 			OutputTidalSignature(scriptText);
-            scriptText.Append("\tINSERT " + CleanName(tableName) + " (");
+			scriptText.AppendLine("\tSET NOCOUNT ON");
+			scriptText.Append("\tINSERT ");
+			if (tableDef.SchemaName != "dbo") scriptText.Append(tableDef.SchemaName + ".");
+			scriptText.Append(CleanName(tableName) + " (");
 
 			/* bool */ firstItem = true;
 			foreach (ColumnDef columnDef in tableDef.ColumnDefMap.Values) {
@@ -198,14 +209,14 @@ namespace TidalCSharp {
 					}
 					else {
 						scriptText.AppendLine(",");
-                        scriptText.Append("\t\t");
+                        scriptText.Append("\t\t\t");
 					}
                     scriptText.Append(CleanName(columnDef.ColumnName));
 				}
 			}
 
 			scriptText.AppendLine(")");
-			scriptText.Append("\tVALUES (");
+			scriptText.Append("\t\tVALUES (");
 
 
 			/* bool */ firstItem = true;
@@ -216,15 +227,16 @@ namespace TidalCSharp {
 					}
 					else {
 						scriptText.AppendLine(",");
-                        scriptText.Append("\t\t");
+                        scriptText.Append("\t\t\t\t");
 					}
-					scriptText.Append("@" + columnDef.ColumnName);
+					scriptText.Append("@" + columnDef.CleanName);
+
 				}
 			}
 			scriptText.AppendLine(");");
 
 			if (identityColumnDef != null) {
-				scriptText.AppendLine("\tSET @" + identityColumnDef.ColumnName + " = SCOPE_IDENTITY();");
+				scriptText.AppendLine("\tSET @" + identityColumnDef.CleanName + " = SCOPE_IDENTITY();");
 			}
 			scriptText.AppendLine("GO");
             scriptText.AppendLine();
@@ -237,9 +249,8 @@ namespace TidalCSharp {
 			
 			string tableName = tableDef.TableName;
 
-			string storedProcName = moduleName + "_" + tableName + "_Delete";
-
-            OutputDIEProcedureText(scriptText, storedProcName);
+			string storedProcName = moduleName + "_" + GetFunctionalName(tableDef) + "_Delete";
+			OutputDIEProcedureText(scriptText, storedProcName);
 
 			
             OutputCreateProcedureText(scriptText, storedProcName);
@@ -248,8 +259,11 @@ namespace TidalCSharp {
 			// , OUT @rowcount int
 			scriptText.AppendLine("AS");
 			OutputTidalSignature (scriptText);
-            scriptText.AppendLine("DELETE FROM " + CleanName(tableName));
-			scriptText.AppendLine("WHERE");
+			scriptText.AppendLine("\tSET NOCOUNT ON");
+			scriptText.Append("\tDELETE FROM ");
+			if (tableDef.SchemaName != "dbo") scriptText.Append(tableDef.SchemaName + ".");
+			scriptText.AppendLine(CleanName(tableDef.TableName));
+			scriptText.Append("\t\tWHERE");
 			OutputPrimaryKeyWhereClause(scriptText, primaryKeyColumnDefList);
 			scriptText.AppendLine(";");
 			// scriptText.AppendLine("SET @rowcount = ROW_COUNT();");
@@ -264,7 +278,7 @@ namespace TidalCSharp {
 			
 			string tableName = tableDef.TableName;
 
-			string storedProcName = moduleName + "_" + tableName + "_DeleteFor";
+			string storedProcName = moduleName + "_" + GetFunctionalName(tableDef) + "_DeleteFor";
 
 			foreach (ColumnDef indexColumnDef in indexColumnDefList) {
 				storedProcName += StripKeySuffix(indexColumnDef.ColumnName);
@@ -291,19 +305,22 @@ namespace TidalCSharp {
 			scriptText.AppendLine();
 			scriptText.AppendLine("AS");
 			OutputTidalSignature (scriptText);
-            scriptText.Append("DELETE FROM " + CleanName(tableName));
+			scriptText.AppendLine("\tSET NOCOUNT ON");
+			scriptText.Append("\tDELETE FROM ");
+			if (tableDef.SchemaName != "dbo") scriptText.Append(tableDef.SchemaName + ".");
+			scriptText.Append(CleanName(tableName));
 
 			/* bool */ firstItem = true;
 			foreach (ColumnDef indexColumnDef in indexColumnDefList) {
 				scriptText.AppendLine("");
 				if (firstItem) { 
-					scriptText.Append("WHERE ");
+					scriptText.Append("\t\tWHERE ");
 					firstItem = false;
 				}
 				else {
-					scriptText.Append("AND ");
+					scriptText.Append("\t\tAND ");
 				}
-                scriptText.Append(CleanName(indexColumnDef.ColumnName) + " = @" + indexColumnDef.ColumnName);
+                scriptText.Append(CleanName(indexColumnDef.ColumnName) + " = @" + indexColumnDef.CleanName);
 
 			}
 			scriptText.AppendLine(";");
@@ -318,8 +335,8 @@ namespace TidalCSharp {
 			StringBuilder scriptText = new StringBuilder();
 			
 			string tableName = tableDef.TableName;
-			
-			string storedProcName = moduleName + "_" + tableName + "_Read";
+			string functionalName = GetFunctionalName(tableDef);
+			string storedProcName = moduleName + "_" + functionalName + "_Read";
 		
 			if (isPrimary == false) {
 				storedProcName += "For";
@@ -341,13 +358,14 @@ namespace TidalCSharp {
 				else {
 					scriptText.AppendLine(",");
 				}
-				scriptText.Append("\t@" + indexColumnDef.ColumnName + " ");
+				scriptText.Append("\t@" + indexColumnDef.CleanName + " ");
 				OutputDataType(scriptText, indexColumnDef);
 			}
 
             scriptText.AppendLine();
 			scriptText.AppendLine("AS");
 			OutputTidalSignature (scriptText);
+			scriptText.AppendLine("\tSET NOCOUNT ON");
 			scriptText.Append("\tSELECT ");
 			
 			/* bool */ firstItem = true;
@@ -360,10 +378,16 @@ namespace TidalCSharp {
 					scriptText.Append("\t\t");
 				}
                 scriptText.Append(CleanName(columnDef.ColumnName));
+				if (columnDef.ColumnName != columnDef.CleanName) {
+					scriptText.Append(" AS " + columnDef.CleanName);
+				}
 			}
 
 			scriptText.AppendLine("");
-            scriptText.Append("\tFROM " + CleanName(tableName));
+			scriptText.Append("\tFROM ");
+			if (tableDef.SchemaName != "dbo") scriptText.Append(tableDef.SchemaName + ".");
+			scriptText.Append(CleanName(tableName));
+
 			/* bool */ firstItem = true;
 			foreach (ColumnDef indexColumnDef in indexColumnDefList) {
 				scriptText.AppendLine("");
@@ -374,7 +398,7 @@ namespace TidalCSharp {
 				else {
 					scriptText.Append("\t\tAND ");
 				}
-				scriptText.Append("\t" + CleanName(indexColumnDef.ColumnName) + " = @" + indexColumnDef.ColumnName);
+				scriptText.Append("\t" + CleanName(indexColumnDef.ColumnName) + " = @" + indexColumnDef.CleanName);
 			}
 			scriptText.AppendLine(";");
 			scriptText.AppendLine("GO");
@@ -391,12 +415,13 @@ namespace TidalCSharp {
 			string tableName = tableDef.TableName;
 			List<ColumnDef> columnDefList = tableDef.ColumnDefMap.Values.ToList();
 
-			var storedProcName = moduleName + "_" + tableName + "_ListAll";
+			var storedProcName = moduleName + "_" + GetFunctionalName(tableDef) + "_ListAll";
             OutputDIEProcedureText(scriptText, storedProcName);
             OutputCreateProcedureText(scriptText, storedProcName);
 			scriptText.AppendLine("\t@allRows bit");
 			scriptText.AppendLine("AS");
 			OutputTidalSignature (scriptText);
+			scriptText.AppendLine("\tSET NOCOUNT ON");
 			scriptText.AppendLine("\tif (@allRows = 1)");
 			scriptText.Append("\t\tSELECT ");
 			
@@ -407,14 +432,21 @@ namespace TidalCSharp {
 				}
 				else {
 					scriptText.AppendLine(",");
+					scriptText.Append("\t\t\t");
 				}
                 scriptText.Append(CleanName(columnDef.ColumnName));
+				if (columnDef.ColumnName != columnDef.CleanName) {
+					scriptText.Append(" AS " + columnDef.CleanName);
+				}
 			}
 
 			scriptText.AppendLine("");
-            scriptText.Append("FROM " + CleanName(tableName) + ";");
-			scriptText.AppendLine("	ELSE");
-			scriptText.Append("SELECT ");
+			scriptText.Append("\t\t\tFROM ");
+			if (tableDef.SchemaName != "dbo") scriptText.Append(tableDef.SchemaName + ".");
+			scriptText.AppendLine(CleanName(tableName) + ";");
+
+			scriptText.AppendLine("\tELSE");
+			scriptText.Append("\t\tSELECT ");
             scriptText.AppendLine("TOP " + listAllLimit + " ");
 			/* bool */ firstItem = true;
 			foreach (ColumnDef columnDef in columnDefList) {
@@ -423,11 +455,17 @@ namespace TidalCSharp {
 				}
 				else {
 					scriptText.AppendLine(",");
+					scriptText.Append("\t\t\t");
 				}
                 scriptText.Append(CleanName(columnDef.ColumnName));
+				if (columnDef.ColumnName != columnDef.CleanName) {
+					scriptText.Append(" AS " + columnDef.CleanName);
+				}
 			}
 			scriptText.AppendLine("");
-            scriptText.AppendLine("FROM " + CleanName(tableName) + ";");
+			scriptText.Append("\t\t\tFROM ");
+			if (tableDef.SchemaName != "dbo") scriptText.Append(tableDef.SchemaName + ".");
+			scriptText.AppendLine(CleanName(tableName) + ";");
 			
 			
 			scriptText.AppendLine("GO");
@@ -443,7 +481,7 @@ namespace TidalCSharp {
 			string tableName = tableDef.TableName;
 			List<ColumnDef> columnDefList = tableDef.ColumnDefMap.Values.ToList();
 
-			string storedProcName = moduleName + "_" + tableName + "_ListFor";
+			string storedProcName = moduleName + "_" + GetFunctionalName(tableDef) + "_ListFor";
 			foreach (ColumnDef columnDef in indexColumnDefList) {
 				storedProcName += StripKeySuffix(columnDef.ColumnName);
 			}
@@ -461,12 +499,13 @@ namespace TidalCSharp {
 				else {
 					scriptText.AppendLine(",");
 				}
-				scriptText.Append("\t@" + columnDef.ColumnName + " ");
+				scriptText.Append("\t@" + columnDef.CleanName + " ");
 				OutputDataType(scriptText, columnDef);
 			}
 			scriptText.AppendLine();
 			scriptText.AppendLine("AS");
 			OutputTidalSignature (scriptText);
+			scriptText.AppendLine("\tSET NOCOUNT ON");
 
 			scriptText.Append("SELECT ");
 			/* bool */ firstItem = true;
@@ -478,9 +517,15 @@ namespace TidalCSharp {
 					scriptText.AppendLine(",");
 				}
                 scriptText.Append(CleanName(columnDef.ColumnName));
+				if (columnDef.ColumnName != columnDef.CleanName) {
+					scriptText.Append(" AS " + columnDef.CleanName);
+				}
 			}
 			scriptText.AppendLine("");
-            scriptText.Append("FROM " + CleanName(tableName));
+			scriptText.Append("FROM ");
+			if (tableDef.SchemaName != "dbo") scriptText.Append(tableDef.SchemaName + ".");
+			scriptText.Append(CleanName(tableName));
+
 			/* bool */ firstItem = true;
 			foreach (ColumnDef indexColumnDef in indexColumnDefList) {
 				scriptText.AppendLine("");
@@ -491,7 +536,7 @@ namespace TidalCSharp {
 				else {
 					scriptText.Append("AND ");
 				}
-                scriptText.Append(CleanName(indexColumnDef.ColumnName) + " = @" + indexColumnDef.ColumnName);
+                scriptText.Append(CleanName(indexColumnDef.ColumnName) + " = @" + indexColumnDef.CleanName);
 			}
 			scriptText.AppendLine(";");
 			scriptText.AppendLine("GO");
@@ -507,7 +552,7 @@ namespace TidalCSharp {
 			string tableName = tableDef.TableName;
 			List<ColumnDef> columnDefList = tableDef.ColumnDefMap.Values.ToList();
 
-			var storedProcName = moduleName + "_" + tableName + "_Update";
+			var storedProcName = moduleName + "_" + GetFunctionalName(tableDef) + "_Update";
 
             OutputDIEProcedureText(scriptText, storedProcName);
             OutputCreateProcedureText(scriptText, storedProcName);
@@ -518,7 +563,7 @@ namespace TidalCSharp {
 			foreach (ColumnDef columnDef in columnDefList) {
 				if (primaryKeyColumnDefList.Contains(columnDef) == false) {
 					scriptText.AppendLine(",");
-					scriptText.Append("\t@" + columnDef.ColumnName + " ");
+					scriptText.Append("\t@" + columnDef.CleanName + " ");
 					OutputDataType(scriptText, columnDef);
 				}
 			}
@@ -526,9 +571,12 @@ namespace TidalCSharp {
             scriptText.AppendLine();
 			scriptText.AppendLine("AS");
 			OutputTidalSignature (scriptText);
-                scriptText.AppendLine("UPDATE " + CleanName(tableName));
+			scriptText.AppendLine("\tSET NOCOUNT ON");
+			scriptText.Append("\tUPDATE ");
+			if (tableDef.SchemaName != "dbo") scriptText.Append(tableDef.SchemaName + ".");
+			scriptText.AppendLine(CleanName(tableName));
 
-			scriptText.Append("SET ");
+			scriptText.Append("\t\tSET ");
 
 			
 			bool firstItem = true;
@@ -539,15 +587,16 @@ namespace TidalCSharp {
 					}
 					else {
 						scriptText.AppendLine(",");
+						scriptText.Append("\t\t\t");
 					}
 	
-                    scriptText.Append(CleanName(columnDef.ColumnName) + " = @" + columnDef.ColumnName);
+                    scriptText.Append(CleanName(columnDef.ColumnName) + " = @" + columnDef.CleanName);
 				}
 			}
 		
 			
 			scriptText.AppendLine();
-			scriptText.AppendLine("WHERE");
+			scriptText.Append("\t\tWHERE");
 			OutputPrimaryKeyWhereClause(scriptText, primaryKeyColumnDefList);
 			scriptText.AppendLine(";");
 			
@@ -569,23 +618,26 @@ namespace TidalCSharp {
 			
 			string tableName = tableDef.TableName;
 
-			string storedProcName = moduleName + "_" + tableName + "_Update" + StripKeySuffix(keyColumnDef.ColumnName);
+			string storedProcName = moduleName + "_" + GetFunctionalName(tableDef) + "_Update" + StripKeySuffix(keyColumnDef.CleanName);
 
             OutputDIEProcedureText(scriptText, storedProcName);
             OutputCreateProcedureText(scriptText, storedProcName);
 
 			OutputPrimaryKeyArguments(scriptText, primaryKeyColumnDefList);
 			scriptText.AppendLine(",");
-			scriptText.Append("\t@" + keyColumnDef.ColumnName + " ");
+			scriptText.Append("\t@" + keyColumnDef.CleanName + " ");
 			OutputDataType(scriptText, keyColumnDef);
 
             scriptText.AppendLine();
 			scriptText.AppendLine("AS");
 			OutputTidalSignature (scriptText);
-                scriptText.AppendLine("UPDATE " + CleanName(tableName));
+			scriptText.AppendLine("\tSET NOCOUNT ON");
+			scriptText.Append("\tUPDATE ");
+			if (tableDef.SchemaName != "dbo") scriptText.Append(tableDef.SchemaName + ".");
+			scriptText.AppendLine(CleanName(tableName));
 
-            scriptText.AppendLine("SET " + CleanName(keyColumnDef.ColumnName) + " = @" + keyColumnDef.ColumnName);
-			scriptText.AppendLine("WHERE");
+            scriptText.AppendLine("\t\tSET " + CleanName(keyColumnDef.ColumnName) + " = @" + keyColumnDef.CleanName);
+			scriptText.Append("\t\tWHERE");
 			OutputPrimaryKeyWhereClause(scriptText, primaryKeyColumnDefList);
 			scriptText.AppendLine(";");
 
@@ -608,7 +660,7 @@ namespace TidalCSharp {
 				else {
 					sb.AppendLine(",");
 				}
-				sb.Append("\t@" + primaryColumnDef.ColumnName + " ");
+				sb.Append("\t@" + primaryColumnDef.CleanName + " ");
 				OutputDataType(sb, primaryColumnDef);	
 			}
 		}
@@ -622,7 +674,7 @@ namespace TidalCSharp {
 				else {
 					sb.AppendLine(" AND");
 				}
-                sb.Append(" " + CleanName(primaryColumnDef.ColumnName) + "=@" + primaryColumnDef.ColumnName);
+                sb.Append(" " + CleanName(primaryColumnDef.ColumnName) + "=@" + primaryColumnDef.CleanName);
 			}
 		}
 
@@ -650,6 +702,11 @@ namespace TidalCSharp {
 		private void OutputTidalSignature (StringBuilder sb) {
 			sb.AppendLine ("\t-- Generated by Tidal");
 		}
+
+		private string GetFunctionalName(TableDef tableDef) {
+			return NameMapping.GetFunctionalName(tableDef);
+		}
+
 		
 
 	}

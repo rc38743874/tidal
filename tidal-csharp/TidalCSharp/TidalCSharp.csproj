@@ -62,6 +62,9 @@
     <Reference Include="Mono.Options">
       <HintPath>..\packages\Mono.Options.5.3.0.1\lib\net4-client\Mono.Options.dll</HintPath>
     </Reference>
+    <Reference Include="Newtonsoft.Json">
+      <HintPath>..\packages\Newtonsoft.Json.11.0.2\lib\net45\Newtonsoft.Json.dll</HintPath>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Program.cs" />
@@ -110,6 +113,11 @@
     <Compile Include="DatabaseTypeEnum.cs" />
     <Compile Include="ModelWriter.cs" />
     <Compile Include="ClassCreatorBase.cs" />
+    <Compile Include="DeOracle.cs" />
+    <Compile Include="Models\TableMapping.cs" />
+    <Compile Include="Models\ColumnMapping.cs" />
+    <Compile Include="MappingFileReader.cs" />
+    <Compile Include="NameMapping.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup />

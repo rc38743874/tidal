@@ -4,58 +4,58 @@ using System.Data.Common;
 using System.Text;
 using System.Collections.Generic;
 using System.Data.SqlClient;
-
+using System.Linq;
 
 namespace TidalCSharp {
 
-    public class MicrosoftSQLTableExtractor : ITableExtractor {
+	public class MicrosoftSQLTableExtractor: ITableExtractor {
 
 
-        private SqlConnection SqlConnection { get; set; }
+		private SqlConnection SqlConnection { get; set; }
 
-        public MicrosoftSQLTableExtractor(SqlConnection connection) {
-            this.SqlConnection = connection;
-        }
+		public MicrosoftSQLTableExtractor(SqlConnection connection) {
+			this.SqlConnection = connection;
+		}
 
-        public void Test(SqlConnection conn) {
-            // catalog, owner, table, tabletype
-            //DataTable table = conn.GetSchema("MetaDataCollections");
-            DataTable table = conn.GetSchema("ForeignKeys");
-            int length = 25;
-            foreach (DataColumn col in table.Columns) {
-                Console.Write("{0,-" + length + "}", col.ColumnName);
-            }
-            Console.WriteLine();
+		public void Test(SqlConnection conn) {
+			// catalog, owner, table, tabletype
+			//DataTable table = conn.GetSchema("MetaDataCollections");
+			DataTable table = conn.GetSchema("ForeignKeys");
+			int length = 25;
+			foreach (DataColumn col in table.Columns) {
+				Console.Write("{0,-" + length + "}", col.ColumnName);
+			}
+			Console.WriteLine();
 
-            foreach (DataRow row in table.Rows) {
-                foreach (DataColumn col in table.Columns) {
-                    if (col.DataType.Equals(typeof(DateTime)))
-                        Console.Write("{0,-" + length + ":d}", row[col]);
-                    else if (col.DataType.Equals(typeof(Decimal)))
-                        Console.Write("{0,-" + length + ":C}", row[col]);
-                    else
-                        Console.Write("{0,-" + length + "}", row[col]);
-                }
-                Console.WriteLine();
-            }
-
-
-        }
+			foreach (DataRow row in table.Rows) {
+				foreach (DataColumn col in table.Columns) {
+					if (col.DataType.Equals(typeof(DateTime)))
+						Console.Write("{0,-" + length + ":d}", row[col]);
+					else if (col.DataType.Equals(typeof(Decimal)))
+						Console.Write("{0,-" + length + ":C}", row[col]);
+					else
+						Console.Write("{0,-" + length + "}", row[col]);
+				}
+				Console.WriteLine();
+			}
 
 
-        public TableDefMap ExtractTableData() {
+		}
 
-            SqlConnection conn = this.SqlConnection;
-            Console.WriteLine("begin test");
-            Test(conn);
 
-            Console.WriteLine("Completed test");
+		public TableDefMap ExtractTableData(List<TableMapping> tableMappingList, bool cleanOracle) {
 
-            var tableDefMap = new TableDefMap();
+			SqlConnection conn = this.SqlConnection;
+			Console.WriteLine("begin test");
+			Test(conn);
 
-            Console.WriteLine("getting tables schema");
+			Console.WriteLine("Completed test");
 
-            /* 
+			var tableDefMap = new TableDefMap();
+
+			Console.WriteLine("getting tables schema");
+
+			/* 
              * Information Schema, GetSchema differences MSSQL from MySQL:
              * Views data fails for MSSQL
              * MSSQL does not have EXTRA for columns
@@ -66,7 +66,7 @@ namespace TidalCSharp {
              * MSSQL foreignkeys collection does not contain most fields
              */
 
-            /* INFORMATION_SCHEMA is kinda crap truth be told.  For SQL Server,
+			/* INFORMATION_SCHEMA is kinda crap truth be told.  For SQL Server,
              * it is just as easy to write queries for exactly what we want, 
              * with the added benefit that it actually works. :)
              * 
@@ -75,48 +75,64 @@ namespace TidalCSharp {
              */
 
 
-            string queryText = "SELECT TABLE_NAME=name FROM sys.tables;";
+			string queryText = "SELECT A.name AS TableName, B.name AS SchemaName "
+					+ "FROM sys.tables AS A JOIN sys.schemas AS B "
+					+ "ON A.schema_id = B.schema_id;";
 
-            foreach (var row in MicrosoftSQL.DataAccess.GetRows(conn, queryText)) {
+			foreach (var row in MicrosoftSQL.DataAccess.GetRows(conn, queryText)) {
 
-                string tableName = (string)row["TABLE_NAME"];
-                TableDef tableDef = new TableDef {
-                    TableName = tableName,
-                    TableType = "TABLE",
-                    ColumnDefMap = new Dictionary<string, ColumnDef>(),
-                    IndexDefMap = new Dictionary<string, IndexDef>(),
-                    ProcedureDefMap = new Dictionary<string, ProcedureDef>(),
-                    FieldDefList = new List<FieldDef>(),
-                    ForeignKeyList = new List<string>(),
-                    ArgumentName = Char.ToLowerInvariant(tableName[0]) + tableName.Substring(1)
-                };
-                tableDefMap[tableName] = tableDef;
+				string tableName = (string)row["TableName"];
+				string schemaName = (string)row["SchemaName"];
+				string cleanName = NameMapping.MakeCleanTableName(tableMappingList, tableName, cleanOracle);
 
-                Console.WriteLine("Adding table " + tableName);
+				TableDef tableDef = new TableDef {
+					TableName = tableName,
+					CleanName = cleanName,
+					SchemaName = schemaName,
+					TableType = "TABLE",
+					ColumnDefMap = new Dictionary<string, ColumnDef>(),
+					IndexDefMap = new Dictionary<string, IndexDef>(),
+					ProcedureDefMap = new Dictionary<string, ProcedureDef>(),
+					FieldDefList = new List<FieldDef>(),
+					ForeignKeyList = new List<string>(),
+					ArgumentName = Char.ToLowerInvariant(tableName[0]) + tableName.Substring(1)
+				};
+				tableDefMap[schemaName + "." + tableName] = tableDef;
 
-            }
+				Console.WriteLine("Adding table " + tableName);
 
-            queryText = "SELECT TABLE_NAME=name FROM sys.views;";
-            foreach (var row in MicrosoftSQL.DataAccess.GetRows(conn, queryText)) {
+			}
 
-                string tableName = (string)row["TABLE_NAME"];
-                TableDef tableDef = new TableDef {
-                    TableName = tableName,
-                    TableType = "VIEW",
-                    ColumnDefMap = new Dictionary<string, ColumnDef>(),
-                    IndexDefMap = new Dictionary<string, IndexDef>(),
-                    ProcedureDefMap = new Dictionary<string, ProcedureDef>(),
-                    FieldDefList = new List<FieldDef>(),
-                    ForeignKeyList = new List<string>()
-                };
-                tableDefMap[tableName] = tableDef;
+			queryText = "SELECT A.name AS TableName, B.name AS SchemaName "
+					+ "FROM sys.views AS A JOIN sys.schemas AS B "
+					+ "ON A.schema_id = B.schema_id;";
 
-                Console.WriteLine("Adding view " + tableName);
+			foreach (var row in MicrosoftSQL.DataAccess.GetRows(conn, queryText)) {
 
-            }
+				string tableName = (string)row["TableName"];
+				string schemaName = (string)row["SchemaName"];
+				string cleanName = NameMapping.MakeCleanTableName(tableMappingList, tableName, cleanOracle);
 
-            queryText = @"SELECT TABLE_NAME = ct.name,
+				TableDef tableDef = new TableDef {
+					TableName = tableName,
+					CleanName = cleanName,
+					SchemaName = schemaName,
+					TableType = "VIEW",
+					ColumnDefMap = new Dictionary<string, ColumnDef>(),
+					IndexDefMap = new Dictionary<string, IndexDef>(),
+					ProcedureDefMap = new Dictionary<string, ProcedureDef>(),
+					FieldDefList = new List<FieldDef>(),
+					ForeignKeyList = new List<string>()
+				};
+				tableDefMap[schemaName + "." + tableName] = tableDef;
+
+				Console.WriteLine("Adding view " + tableName);
+
+			}
+
+			queryText = @"SELECT TABLE_NAME = ct.name,
             COLUMN_NAME = c.name,
+			SCHEMA_NAME = sch.name,
             CHARACTER_MAXIMUM_LENGTH = c.max_length,
             DATA_TYPE = typ.name,
             IS_NULLABLE = c.is_nullable,
@@ -126,47 +142,57 @@ namespace TidalCSharp {
             ON c.object_id = ct.object_id
             INNER JOIN sys.types typ
             ON c.system_type_id = typ.system_type_id
+			INNER JOIN sys.schemas sch
+			ON ct.schema_id = sch.schema_id
             WHERE ct.type IN ('U', 'V')
             ORDER BY TABLE_NAME, COLUMN_NAME;";
-            /*  for MySQL: queryText = "SELECT COLUMN_NAME, TABLE_NAME, CHARACTER_MAXIMUM_LENGTH, DATA_TYPE, EXTRA, IS_NULLABLE FROM INFORMATION_SCHEMA.COLUMNS ORDER BY TABLE_NAME ASC, ORDINAL_POSITION ASC;"; */
-            foreach (var row in MicrosoftSQL.DataAccess.GetRows(conn, queryText)) {
-                string columnName = (string)row["COLUMN_NAME"];
-                string tableName = (string)row["TABLE_NAME"];
+			/*  for MySQL: queryText = "SELECT COLUMN_NAME, TABLE_NAME, CHARACTER_MAXIMUM_LENGTH, DATA_TYPE, EXTRA, IS_NULLABLE FROM INFORMATION_SCHEMA.COLUMNS ORDER BY TABLE_NAME ASC, ORDINAL_POSITION ASC;"; */
+			foreach (var row in MicrosoftSQL.DataAccess.GetRows(conn, queryText)) {
+				string columnName = (string)row["COLUMN_NAME"];
+				string tableName = (string)row["TABLE_NAME"];
+				string schemaName = (string)row["SCHEMA_NAME"];
 
-                Console.WriteLine("Adding column " + columnName + " from table " + tableName);
+				Console.WriteLine("Adding column " + columnName + " from table " + tableName);
 
-                short? dataLength;
-                if (row["CHARACTER_MAXIMUM_LENGTH"] == DBNull.Value) {
-                    dataLength = null;
-                }
-                else {
-                    dataLength = (short)row["CHARACTER_MAXIMUM_LENGTH"];
-                }
+				short? dataLength;
+				if (row["CHARACTER_MAXIMUM_LENGTH"] == DBNull.Value) {
+					dataLength = null;
+				} else {
+					dataLength = (short)row["CHARACTER_MAXIMUM_LENGTH"];
+				}
+
+				string cleanName = NameMapping.MakeCleanColumnName(tableMappingList, tableName, columnName, cleanOracle);
+
+				bool forceToBit = false;
+				if (cleanOracle == true) {
+					forceToBit = IsForceToBit(tableMappingList, tableName, columnName);
+				}
+
+				/* MySQL provides IsIdentity = ((string)row["EXTRA"]).Contains("auto_increment"), */
+				ColumnDef columnDef = new ColumnDef {
+					ColumnName = columnName,
+					CleanName = cleanName,
+					ColumnType = (string)row["DATA_TYPE"],
+					DataLength = (ulong?)dataLength,
+					ForceToBit = forceToBit,
+					IsIdentity = (bool)row["IS_IDENTITY"],
+					IsNullable = (bool)row["IS_NULLABLE"]
+				};
+				Console.WriteLine(tableName);
+
+				tableDefMap[schemaName + "." + tableName].ColumnDefMap[columnName] = columnDef;
+				Console.WriteLine("Column " + columnName + " added.");
+			}
 
 
+			/* will get primary key and unique key, which is used for Read and ReadFor functions */
+			/* will get indexes for use in ListFor functions */
 
-                /* MySQL provides IsIdentity = ((string)row["EXTRA"]).Contains("auto_increment"), */
-                ColumnDef columnDef = new ColumnDef {
-                    ColumnName = columnName,
-                    ColumnType = (string)row["DATA_TYPE"],
-                    DataLength = (ulong?)dataLength,
-                    IsIdentity = (bool)row["IS_IDENTITY"],
-                    IsNullable = (bool)row["IS_NULLABLE"]
-                };
-                Console.WriteLine(tableName);
-
-                tableDefMap[tableName].ColumnDefMap[columnName] = columnDef;
-                Console.WriteLine("Column " + columnName + " added.");
-            }
-
-
-            /* will get primary key and unique key, which is used for Read and ReadFor functions */
-            /* will get indexes for use in ListFor functions */
-
-            /* had QUOTENAME function for SCHEMA_NAME and TABLE_NAME which I removed,
+			/* had QUOTENAME function for SCHEMA_NAME and TABLE_NAME which I removed,
             also removed SCHEMA_NAME = OBJECT_SCHEMA_NAME(i.[object_id]), */
-            queryText = @"SELECT
+			queryText = @"SELECT
             TABLE_NAME = ct.name,
+            SCHEMA_NAME = sch.name,
             INDEX_NAME = i.name,
             PRIMARY_KEY = i.is_primary_key,
             [UNIQUE] = i.is_unique,
@@ -183,43 +209,47 @@ namespace TidalCSharp {
             AND ic.[object_id] = c.[object_id]
             INNER JOIN sys.objects ct
             ON i.object_id = ct.object_id
+			INNER JOIN sys.schemas sch
+			ON ct.schema_id = sch.schema_id
             WHERE ct.type IN ('U', 'V')
             ORDER BY TABLE_NAME, INDEX_NAME, ic.index_column_id;";
 
-            foreach (var row in MicrosoftSQL.DataAccess.GetRows(conn, queryText)) {
-                string tableName = (string)row["TABLE_NAME"];
-                string indexName = (string)row["INDEX_NAME"];
-                string columnName = (string)row["COLUMN_NAME"];
+			foreach (var row in MicrosoftSQL.DataAccess.GetRows(conn, queryText)) {
+				string tableName = (string)row["TABLE_NAME"];
+				string schemaName = (string)row["SCHEMA_NAME"];
+				string indexName = (string)row["INDEX_NAME"];
+				string columnName = (string)row["COLUMN_NAME"];
 
-                Console.WriteLine("Adding index column " + columnName + " from index " + indexName + " on table " + tableName);
+				Console.WriteLine("Adding index column " + columnName + " from index " + indexName + " on table " + tableName);
 
-                // int ordinalPosition = (int)row["ORDINAL_POSITION"];
-                /* SORT_ORDER */
-                Console.WriteLine("looking for table " + tableName);
-                TableDef tableDef = tableDefMap[tableName];
+				// int ordinalPosition = (int)row["ORDINAL_POSITION"];
+				/* SORT_ORDER */
+				Console.WriteLine("looking for table " + tableName);
+				TableDef table = tableDefMap[schemaName + "." + tableName];
 
-                TableDef table = tableDefMap[tableName];
-                IndexDef indexDef = null;
-                if (table.IndexDefMap.TryGetValue(indexName, out indexDef) == false) {
-                    indexDef = new IndexDef {
-                        IndexName = indexName,
-                        // IsPrimary = (indexName == "PRIMARY"), 
-                        IsPrimary = (bool)row["PRIMARY_KEY"],
-                        //                      IsUnique = ((bool)row["NON_UNIQUE"]!=true),
-                        IsUnique = (bool)row["UNIQUE"],
-                        ColumnDefList = new List<ColumnDef>()
-                    };
-                    table.IndexDefMap[indexName] = indexDef;
-                }
+				IndexDef indexDef = null;
+				if (table.IndexDefMap.TryGetValue(indexName, out indexDef) == false) {
+					indexDef = new IndexDef {
+						IndexName = indexName,
+						// IsPrimary = (indexName == "PRIMARY"), 
+						IsPrimary = (bool)row["PRIMARY_KEY"],
+						//                      IsUnique = ((bool)row["NON_UNIQUE"]!=true),
+						IsUnique = (bool)row["UNIQUE"],
+						ColumnDefList = new List<ColumnDef>()
+					};
+					table.IndexDefMap[indexName] = indexDef;
+				}
 
-                ColumnDef columnDef = tableDef.ColumnDefMap[columnName];
-                indexDef.ColumnDefList.Add(columnDef);
-            }
+				ColumnDef columnDef = table.ColumnDefMap[columnName];
+				indexDef.ColumnDefList.Add(columnDef);
+			}
 
-            queryText = @"SELECT TABLE_NAME = ct.name,
+			queryText = @"SELECT TABLE_NAME = ct.name,
+			SCHEMA_NAME = sch.name,
             COLUMN_NAME = c.name,
             REFERENCED_TABLE_NAME = rct.name,
-            REFERENCED_COLUMN_NAME = rc.name
+            REFERENCED_COLUMN_NAME = rc.name,
+			REFERENCED_SCHEMA_NAME = refsch.name
             FROM sys.foreign_key_columns AS fkc
             INNER JOIN sys.columns c
             ON fkc.parent_object_id = c.object_id
@@ -231,19 +261,47 @@ namespace TidalCSharp {
             AND fkc.referenced_column_id = rc.column_id
             INNER JOIN sys.objects rct
             ON rc.object_id = rct.object_id
+			INNER JOIN sys.schemas sch
+			ON ct.schema_id = sch.schema_id
+			INNER JOIN sys.schemas refsch
+			ON rct.schema_id = refsch.schema_id
             WHERE ct.type IN ('U', 'V')
             ORDER BY TABLE_NAME, COLUMN_NAME;";
 
-            foreach (var row in MicrosoftSQL.DataAccess.GetRows(conn, queryText)) {
-                TableDef tableDef = tableDefMap[row["TABLE_NAME"].ToString()];
-                ColumnDef columnDef = tableDef.ColumnDefMap[row["COLUMN_NAME"].ToString()];
+			foreach (var row in MicrosoftSQL.DataAccess.GetRows(conn, queryText)) {
+				TableDef tableDef = tableDefMap[row["SCHEMA_NAME"] + "." + row["TABLE_NAME"].ToString()];
+				ColumnDef columnDef = tableDef.ColumnDefMap[row["COLUMN_NAME"].ToString()];
 
-                columnDef.ReferencedTableDef = tableDefMap[row["REFERENCED_TABLE_NAME"].ToString()];
-                columnDef.ReferencedColumnDef = columnDef.ReferencedTableDef.ColumnDefMap[row["REFERENCED_COLUMN_NAME"].ToString()];
-                Console.WriteLine("Adding foreign key for " + tableDef.TableName + "." + columnDef.ColumnName + " to " + columnDef.ReferencedTableDef.TableName + "." + columnDef.ReferencedColumnDef.ColumnName);
-            }
+				columnDef.ReferencedTableDef = tableDefMap[row["REFERENCED_SCHEMA_NAME"].ToString() + "." + row["REFERENCED_TABLE_NAME"].ToString()];
+				columnDef.ReferencedColumnDef = columnDef.ReferencedTableDef.ColumnDefMap[row["REFERENCED_COLUMN_NAME"].ToString()];
+
+				Console.WriteLine("Adding foreign key for " + tableDef.TableName + "." + columnDef.ColumnName + " to " + columnDef.ReferencedTableDef.TableName + "." + columnDef.ReferencedColumnDef.ColumnName);
+			}
 
 			return tableDefMap;
+		}
+
+
+
+
+
+
+
+		private bool IsForceToBit(List<TableMapping> tableMappingList, string tableName, string columnName) {
+			if (tableMappingList != null) {
+				var tableMapping = tableMappingList.FirstOrDefault(x => x.TableName == tableName);
+				if (tableMapping != null) {
+					if (tableMapping.ColumnArray != null) {
+						var mapping = tableMapping.ColumnArray.FirstOrDefault(x => x.ColumnName == columnName);
+						if (mapping != null) {
+							if (mapping.ForceToBit != null) {
+								return mapping.ForceToBit;
+							}
+						}
+					}
+				}
+			}
+			return false;
 		}
 	}
 }

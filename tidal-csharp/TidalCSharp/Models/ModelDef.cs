@@ -1,6 +1,8 @@
 
+using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 
 namespace TidalCSharp {
 	public class ModelDef {
@@ -19,6 +21,8 @@ namespace TidalCSharp {
 		public bool UsesBuildListFunction { get; set; }
 		public bool UsesMakeObjectFunction { get; set; }
 
+		/** if this model is just a table and doesn't exist as a matching class in our assembly */
+		public bool IsJustTable { get; set; }
 
 		public PropertyDef GetLikelyPropertyDef(string sqlName) {
 			string possiblePropertyName = sqlName;
@@ -34,11 +38,43 @@ namespace TidalCSharp {
 					return this.PropertyDefMap[possiblePropertyName];
 				}
 			}
-			
+
 			return null;
 		}
 
-	/* TODO: Duplicate function */
+		public List<PropertyDef> ScanForLikelyPropertyDef(List<PropertyDef> incomingPropertyDefChain, string sqlName, ModelDef referencedModelDef, List<ModelDef> modelDefList) {
+			/* used when we haven't found any property to use, but it might be that it is a property of a 
+			 * referenced object (or of a reference to a reference etc.).  So drill down along the model map
+			 * to see if we can find one that matches.
+			 */
+			var usedModelDefs = new List<ModelDef>() { this };
+
+			foreach (var propertyDef in this.PropertyDefMap.Values) {
+				if (propertyDef.IsReference) {
+					var subModelDef = modelDefList.FirstOrDefault(x => x.Namespace == propertyDef.PropertyTypeNamespace && x.ModelName == propertyDef.PropertyTypeCode);
+					if (usedModelDefs.Contains(subModelDef) == false) {
+						usedModelDefs.Add(subModelDef);
+						var outputPropertyDefChain = new List<PropertyDef>(incomingPropertyDefChain);
+						outputPropertyDefChain.Add(propertyDef);
+						// Console.WriteLine($"DEBUG:sqlName:{sqlName},referencedModelDef.ModelName={referencedModelDef.ModelName}, subModelDef.ModelName={subModelDef.ModelName}");
+						if (subModelDef == referencedModelDef) {
+							var newPropertyDef = subModelDef.GetLikelyPropertyDef(sqlName);
+							if (newPropertyDef != null) {
+								outputPropertyDefChain.Add(newPropertyDef);
+								return outputPropertyDefChain;
+							}
+						}
+						else {
+							var bestResult = subModelDef.ScanForLikelyPropertyDef(outputPropertyDefChain, sqlName, referencedModelDef, modelDefList);
+							if (bestResult != null) return bestResult;
+						}
+					}
+				}
+			}
+			return null;					
+		}
+
+		/* TODO: Remove duplicated function */
 		private string StripKeySuffix(string name) {
 			if (name.EndsWith("Key", false, CultureInfo.InvariantCulture)) {
 				return name.Substring(0, name.Length-3);

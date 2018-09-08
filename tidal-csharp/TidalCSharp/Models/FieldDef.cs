@@ -4,6 +4,7 @@ using System.Text;
 
 /* represents a field in the results of a stored procedure query.
 	Not every field will always translate to a PropertyDef, but usually they do.
+	Also not every field is necessarily a ColumnDef, because some fields may be computed in the output.
  */
 namespace TidalCSharp {
 	public class FieldDef {
@@ -20,8 +21,11 @@ namespace TidalCSharp {
 		public string BaseColumnName {get; set; }
 
 
-		/* cross lookup */
+		/* cross lookup for a single property */
 		public PropertyDef PropertyDef {get; set; }
+
+		/* cross lookup if the property is a sub-property of another referenced model */
+		public List<PropertyDef> PropertyDefChain { get; set; }
 
 		/* TODO: these aren't really part of FieldDef, should ref PropertyDef I think */
 		public string PropertyTypeCode {get; set; }

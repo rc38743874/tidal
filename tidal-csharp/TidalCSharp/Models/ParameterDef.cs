@@ -39,7 +39,7 @@ namespace TidalCSharp {
 		public string ToJSONString() {
 			StringBuilder sb = new StringBuilder();
 			sb.AppendLine($"{{parameterName:\"{this.ParameterName}\",");
-			sb.AppendLine($"{{parameterMode:\"{this.ParameterMode}\",");
+			sb.AppendLine($"parameterMode:\"{this.ParameterMode}\",");
 			sb.AppendLine($"parameterDataTypeCode:\"{this.ParameterDataTypeCode}\",");
 			sb.AppendLine($"parameterSize:{this.ParameterSize},");
 			sb.AppendLine($"isIdentity:{this.IsIdentity.ToString().ToLowerInvariant()},");

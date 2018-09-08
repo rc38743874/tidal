@@ -32,7 +32,13 @@ namespace TidalCSharp {
 				SqlConnection conn = this.SqlConnection;
 
                 using (SqlCommand command = new SqlCommand(execText, conn)) {
-                    command.ExecuteNonQuery();
+					try {
+						command.ExecuteNonQuery();
+					} 
+					catch {
+						Console.WriteLine("Command Text: " + execText);
+						throw;
+					}
                 }
 				Console.WriteLine(" complete.");
             }

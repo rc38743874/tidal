@@ -185,6 +185,7 @@ namespace TidalCSharp {
 							string fieldName = row["ColumnName"].ToString();
 							string baseTableName = row["BaseTableName"].ToString();
 							string baseColumnName = row["BaseColumnName"].ToString();
+
 							bool isNullable = (bool)row["AllowDBNull"];
 
 							string dataTypeCode = TypeConvertor.ConvertSQLToCSharp(fieldTypeLookup[fieldName].ToLowerInvariant());

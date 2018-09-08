@@ -36,7 +36,7 @@ namespace TidalCSharp {
 				CommandText = $@"SELECT sobj.name as Name,    
 (SELECT count(is_selected) FROM sys.sql_dependencies AS sis WHERE sobj.object_id = sis.object_id AND is_selected = 1) AS PerformsSelectCount,
                 (SELECT count(is_updated) FROM sys.sql_dependencies AS siu WHERE sobj.object_id = siu.object_id AND is_updated = 1) AS PerformsUpdateCount
-                FROM sys.objects AS sobj WHERE type = 'P' AND name like '{moduleName}_%_%' ORDER BY name;",
+                FROM sys.objects AS sobj WHERE type = 'P' AND name like '{moduleName}\_%\_%' ESCAPE '\' ORDER BY name;",
 				CommandType = CommandType.Text,
 				Connection = conn
 			}) {
@@ -50,14 +50,19 @@ namespace TidalCSharp {
 
 						/* we also have the ability to check referenced tables if need be */
 
-						int lastUnderscoreIndex = procedureName.IndexOf("_", moduleName.Length + 2, StringComparison.InvariantCulture);
+						int secondUnderscoreIndex = procedureName.IndexOf("_", moduleName.Length + 2, StringComparison.InvariantCulture);
 
-						string tableName = procedureName.Substring(moduleName.Length + 1, lastUnderscoreIndex - moduleName.Length - 1);
+						string functionalName = procedureName.Substring(moduleName.Length + 1, secondUnderscoreIndex - moduleName.Length - 1);
 
-						if (tableDefMap.ContainsKey(tableName) == false) {
-							throw new ApplicationException("Table " + tableName + " referenced in stored procedure " + procedureName + " was not found in table definitions.");
+						Console.WriteLine($"moduleName:{moduleName}, functionalName:{functionalName}, secondUnderscoreIndex:{secondUnderscoreIndex}");
+
+
+						/* that is the functional name, so we want to find by that */
+						var tableDef = tableDefMap.Values.SingleOrDefault(x => NameMapping.GetFunctionalName(x) == functionalName);
+
+						if (tableDef == null) {
+							throw new ApplicationException("Table with functional name " + functionalName + " referenced in stored procedure " + procedureName + " was not found in table definitions.");
 						}
-						TableDef tableDef = tableDefMap[tableName];
 
 						ProcedureDef procedureDef = new ProcedureDef {
 							ProcedureName = procedureName,
@@ -118,7 +123,7 @@ namespace TidalCSharp {
 
 
 			using (SqlCommand command = new SqlCommand() {
-				CommandText = $"SELECT * FROM INFORMATION_SCHEMA.PARAMETERS WHERE SPECIFIC_CATALOG='{databaseName}' AND SPECIFIC_NAME like '{moduleName}_%_%' ORDER BY ORDINAL_POSITION ASC",
+				CommandText = $"SELECT * FROM INFORMATION_SCHEMA.PARAMETERS WHERE SPECIFIC_CATALOG='{databaseName}' AND SPECIFIC_NAME like '{moduleName}\\_%\\_%' ESCAPE '\\' ORDER BY ORDINAL_POSITION ASC",
 				CommandType = CommandType.Text,
 				Connection = this.SqlConnection
 			}) {
@@ -196,7 +201,24 @@ namespace TidalCSharp {
 		private void PopulateFields2012(ProcedureDef procedureDef) {
 
 
-			/* pass procedureName, then a string of parameters (not necessary), and finally browserInfo must be 1 to get source table info */
+			/* pass procedureName, then a string of parameters (not necessary), 
+			 *      browserInfo should be 0 to return only the outputted columns and not join columns
+			 *      and finally browserInfo must be 1 to get source table info on second call */
+			var validNameList = new List<string>();
+			using (SqlCommand command = new SqlCommand() {
+				CommandText = $@"SELECT FieldName=name FROM sys.dm_exec_describe_first_result_set('{procedureDef.ProcedureName}', NULL, 0)",
+				CommandType = CommandType.Text,
+				Connection = this.SqlConnection
+			}) {
+				using (var reader = command.ExecuteReader()) {
+					while (reader.Read()) {
+						IDataReader row = reader;
+						string fieldName = row["FieldName"].ToString();
+						validNameList.Add(fieldName);
+					}
+				}
+			}
+
 			using (SqlCommand command = new SqlCommand() {
 				CommandText = $@"SELECT FieldName=name, DataTypeCode=system_type_name, IsNullable = is_nullable, BaseTableName = source_table, BaseColumnName = source_column FROM sys.dm_exec_describe_first_result_set('{procedureDef.ProcedureName}', NULL, 1)",
 				CommandType = CommandType.Text,
@@ -209,40 +231,49 @@ namespace TidalCSharp {
 						IDataReader row = reader;
 
 						string fieldName = row["FieldName"].ToString();
-						string sqlDataTypeCode = row["DataTypeCode"].ToString();
-
-						/* MSSQL2012 will send a char length too, e.g. varchar(10), decimal(18,0) */
-						var match = regex.Match(sqlDataTypeCode);
-						if (match.Success) {
-							sqlDataTypeCode = match.Groups[1].Value;
+						if (validNameList.Contains(fieldName) == false) {
+							// Console.WriteLine("Skipping superfluous field " + fieldName);
 						}
+						else {
+							string sqlDataTypeCode = row["DataTypeCode"].ToString();
 
-						string dataTypeCode = TypeConvertor.ConvertSQLToCSharp(sqlDataTypeCode);
+							/* MSSQL2012 will send a char length too, e.g. varchar(10), decimal(18,0) */
+							var match = regex.Match(sqlDataTypeCode);
+							if (match.Success) {
+								sqlDataTypeCode = match.Groups[1].Value;
+							}
 
-						bool isNullable = (bool)row["IsNullable"];
-						/* max_length, precision, scale */
+							string dataTypeCode;
+							try {
+								dataTypeCode = TypeConvertor.ConvertSQLToCSharp(sqlDataTypeCode);
+							} catch (Exception ex) {
+								Console.WriteLine("last call to ConvertSQLToCSharp was for procedure " + procedureDef.ProcedureName + ", field named \"" + fieldName + "\".  This can happen if you have a stored procedure that is referencing a column that no longer exists for a table.  Check that the procedure will run on its own.");
+								throw;
+							}
 
-						/* TODO: using result set procedure does not populate source 
-						 * table or column, which is as close to these fields 
-						 * as I could find */
-						string baseTableName = row["BaseTableName"].ToString();
-						string baseColumnName = row["BaseColumnName"].ToString();
+							bool isNullable = (bool)row["IsNullable"];
+							/* max_length, precision, scale */
+
+							/* TODO: using result set procedure does not populate source 
+							 * table or column, which is as close to these fields 
+							 * as I could find */
+							string baseTableName = row["BaseTableName"].ToString();
+							string baseColumnName = row["BaseColumnName"].ToString();
+							// Console.WriteLine($"DEBUG:procedureName={procedureDef.ProcedureName}, fieldName={fieldName}, baseTableName={baseTableName}, baseColumnName={baseColumnName}");
+
+							FieldDef fieldDef = new FieldDef {
+								FieldName = fieldName,
+								ProcedureDef = procedureDef,
+								DataTypeCode = dataTypeCode,
+								IsNullable = isNullable,
+								BaseTableName = baseTableName,
+								BaseColumnName = baseColumnName
+							};
 
 
-						FieldDef fieldDef = new FieldDef {
-							FieldName = fieldName,
-							ProcedureDef = procedureDef,
-							DataTypeCode = dataTypeCode,
-							IsNullable = isNullable,
-							BaseTableName = baseTableName,
-							BaseColumnName = baseColumnName
-						};
+							procedureDef.FieldDefMap[fieldDef.FieldName] = fieldDef;
 
-
-						procedureDef.FieldDefMap[fieldDef.FieldName] = fieldDef;
-
-
-
+						}
 
 					}
 				}

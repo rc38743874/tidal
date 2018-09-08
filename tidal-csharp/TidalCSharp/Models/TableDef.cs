@@ -7,7 +7,13 @@ using System.Linq;
 namespace TidalCSharp {
 	public class TableDef {
 
-		public string TableName {get; set; }
+		/* name as it appears in the database */
+		public string TableName { get; set; }
+
+		/* name cleaned to use an MSSQL/MySQL convention instead of Oracle */
+		public string CleanName { get; set; }
+
+		public string SchemaName { get; set; }
 		
 		public string TableType {get; set; }
 
@@ -65,6 +71,8 @@ namespace TidalCSharp {
 			var build = new StringBuilder();
 			build.Append("{");
 			build.AppendFormat("\"tableName\":\"{0}\",", this.TableName);
+			build.AppendLine();
+			build.AppendFormat("\"cleanName\":\"{0}\",", this.CleanName);
 			build.AppendLine();
 			build.AppendFormat("\"tableType\":\"{0}\",", this.TableType);
 			build.AppendLine();

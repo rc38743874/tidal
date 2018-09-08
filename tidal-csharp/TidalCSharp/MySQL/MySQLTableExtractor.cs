@@ -17,7 +17,8 @@ namespace TidalCSharp {
 			this.mySqlConnection = connection;
 		}
 
-		public TableDefMap ExtractTableData() {
+		/* TODO: Combine commonality with MSSQL's, and include its name mapping functionality */
+		public TableDefMap ExtractTableData(List<TableMapping> tableMappingList, bool cleanOracle) {
 
 			MySqlConnection conn = this.mySqlConnection;
 
@@ -35,8 +36,13 @@ namespace TidalCSharp {
 			foreach (System.Data.DataRow row in tablesData.Rows) {
 		
 				string tableName = (string)row["TABLE_NAME"];
+				string cleanName = tableName;
+				if (cleanOracle == true) {
+					cleanName = DeOracle.Clean(tableName);
+				}
 				TableDef tableDef = new TableDef {TableName = tableName,
 					TableType = "TABLE",
+					CleanName = cleanName,
 					ColumnDefMap = new Dictionary<string, ColumnDef>(),
 					IndexDefMap = new Dictionary<string, IndexDef>(),
 					ProcedureDefMap = new Dictionary<string, ProcedureDef>(),
@@ -67,7 +73,12 @@ namespace TidalCSharp {
 			foreach (System.Data.DataRow row in viewsData.Rows) {
 		
 				string tableName = (string)row["TABLE_NAME"];
+				string cleanName = tableName;
+				if (cleanOracle == true) {
+					cleanName = DeOracle.Clean(tableName);
+				}
 				TableDef tableDef = new TableDef {TableName = tableName,
+					CleanName = cleanName,
 					TableType = "VIEW",
 					ColumnDefMap = new Dictionary<string, ColumnDef>(),
 					IndexDefMap = new Dictionary<string, IndexDef>(),
@@ -103,7 +114,12 @@ namespace TidalCSharp {
 					dataLength = (ulong)row["CHARACTER_MAXIMUM_LENGTH"];
 				}
 
+				string cleanName = columnName;
+				if (cleanOracle == true) {
+					cleanName = DeOracle.Clean(columnName);
+				}
 				ColumnDef columnDef = new ColumnDef {ColumnName = columnName,
+					CleanName = cleanName,
 					ColumnType = (string)row["DATA_TYPE"],
 					DataLength = dataLength,
 					IsIdentity = ((string)row["EXTRA"]).Contains("auto_increment"),

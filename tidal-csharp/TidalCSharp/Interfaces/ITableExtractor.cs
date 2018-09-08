@@ -6,7 +6,7 @@ namespace TidalCSharp {
 
 	public interface ITableExtractor {
 		
-		TableDefMap ExtractTableData();
+		TableDefMap ExtractTableData(List<TableMapping> tableMappingList, bool cleanOracle);
 		
 	}
 }

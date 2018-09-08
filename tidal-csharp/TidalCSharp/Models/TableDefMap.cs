@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Linq;
 
 namespace TidalCSharp {
 
@@ -10,7 +11,8 @@ namespace TidalCSharp {
 			StringBuilder build = new StringBuilder();
 			build.Append("[");
 			bool first = true;
-			foreach (TableDef tableDef in this.Values) {
+			var sortedArray = this.Values.OrderBy(x => x.CleanName);
+			foreach (TableDef tableDef in sortedArray) {
 				if (first == true) {
 					first = false;
 				}
