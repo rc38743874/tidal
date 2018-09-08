@@ -24,7 +24,8 @@ namespace TidalCSharp {
 						Namespace = modelType.Namespace,
 						FunctionDefList = new List<FunctionDef>(),
 						PropertyDefMap = new Dictionary<string, PropertyDef>(),
-						FieldDefMap = new Dictionary<string, FieldDef>()
+						FieldDefMap = new Dictionary<string, FieldDef>(), 
+						IsJustTable = false
 					};
 
 					/* okay this is a little confusing because FieldDefMap we are using to store
@@ -66,9 +67,13 @@ namespace TidalCSharp {
 
 		private static void AddMember(ModelDef modelDef, string memberName, Type type, string requiredNamespace) {
 			string typeCode = type.Name;
+			string typeNamespace = type.Namespace;
 			if (type.Namespace != requiredNamespace) {
 				string vernacularCode = TypeConvertor.ConvertCLRToVernacular(type.ToString());
-				if (vernacularCode != null) typeCode = vernacularCode;
+				if (vernacularCode != null) {
+					typeCode = vernacularCode;
+					typeNamespace = null;
+				}
 			}
 
 			/* TODO: better to use IsClass or IsByRef ? */
@@ -77,6 +82,8 @@ namespace TidalCSharp {
 				Console.WriteLine("State");
 			}
 			if (typeCode == "string") isReference = false;
+
+
 
 			/* TODO: not sure if this should rewrite the type here or not */
 			/* TODO: the Interface rewriting should be an option */
@@ -87,7 +94,7 @@ namespace TidalCSharp {
 			PropertyDef propertyDef = new PropertyDef {
 				PropertyName = memberName,
 				PropertyTypeCode = typeCode,
-				PropertyTypeNamespace = type.Namespace,
+				PropertyTypeNamespace = typeNamespace,
 				IsInterface = type.IsInterface,
 				IsReference = isReference,
 				IsEnum = type.IsEnum

@@ -37,11 +37,13 @@ namespace TidalCSharp {
 				case "char":
 				case "nvarchar":
 				case "nchar":
+				case "xml":
 					return "string";
 				case "real":
 					return "single";
 				case "float":
 					return "double";
+				case "date":
 				case "smalldatetime":
 				case "datetime":
 				case "datetime2":

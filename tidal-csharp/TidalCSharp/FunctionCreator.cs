@@ -8,7 +8,13 @@ namespace TidalCSharp {
 	public class FunctionCreator {
 
 
-		public static List<ModelDef> CreateModelDefList (string modelNamespace, string moduleName, Dictionary<string, ModelDef> modelDefMap, List<ProcedureDef> procedureDefList) {
+		public static List<ModelDef> CreateModelDefList (string modelNamespace, 
+				string moduleName, 
+				Dictionary<string, ModelDef> modelDefMap, 
+				List<ProcedureDef> procedureDefList, 
+				List<string> ignoreTableNameList,
+				List<TableMapping> tableMappingList,
+				bool cleanOracle) {
 	//		List<ModelDef> modelDefList = new List<ModelDef>();
 
 			foreach (ProcedureDef procedureDef in procedureDefList) {
@@ -19,20 +25,26 @@ namespace TidalCSharp {
 				string modelName = procedureName.Substring(firstUnderscoreIndex + 1, lastUnderscoreIndex - firstUnderscoreIndex - 1);
 				string functionName = procedureName.Substring(lastUnderscoreIndex + 1);
 
+				/* skip tables we are ignoring */
+				if (ignoreTableNameList.Contains(modelName)) continue;
+
 				ModelDef modelDef = null;
 				if (modelDefMap.ContainsKey(modelName)) {
 					modelDef = modelDefMap[modelName];
 				}
 				else {
-					Console.WriteLine("Procedure " + procedureName + " coded for table named " + modelName + " did not have a matching model in the models collection.");
-					Console.WriteLine("Available models follow:");
-					foreach (var modelDefTest in modelDefMap.Keys) {
-						Console.WriteLine(modelDefTest);
-					}
-					/* TODO: process for creating procedures without needing an underlying class */
-					/* TODO: remove hack continue */
-					continue; 
-					// throw new ApplicationException("Procedure " + procedureName + " coded for table named " + modelName + " did not have a matching model in the models collection.");
+					Console.WriteLine("Adding a virtual model after table named " + modelName + " from procedure " + procedureName + " which did not have a matching model in the models collection.");
+					modelDef = new ModelDef {
+						ModelName = modelName,
+						FieldDefMap = new Dictionary<string, FieldDef>(),
+						FunctionDefList = new List<FunctionDef>(),
+						Namespace = "",
+						PropertyDefMap = new Dictionary<string, PropertyDef>(),
+						UsesBuildListFunction = false,
+						UsesMakeObjectFunction = false, 
+						IsJustTable = true
+					};
+					modelDefMap[modelName] = modelDef;
 				}
 				
 				FunctionDef functionDef = new FunctionDef {
@@ -43,7 +55,7 @@ namespace TidalCSharp {
 
 				modelDef.FunctionDefList.Add(functionDef);
 
-				bool isSingleRow =  (functionName.StartsWith("Read"));
+				bool isSingleRow = (functionName.StartsWith("Read"));
 
 				if (procedureDef.OutputsRows == true) {
 					functionDef.OutputsList = true;
@@ -65,8 +77,8 @@ namespace TidalCSharp {
 					functionDef.OutputsObject = false;			
 				}
 
-
 				foreach (ParameterDef parameterDef in procedureDef.ParameterDefMap.Values) {
+
 					string typeCode = TypeConvertor.ConvertNullableSQLToCSharp(parameterDef.ParameterDataTypeCode, parameterDef.IsNullable);
 
 					if (parameterDef.IsOutParameter == true) {
@@ -104,6 +116,10 @@ namespace TidalCSharp {
 						if (propertyDef != null) {
 							argumentDef.PropertyDef = propertyDef;
 							parameterDef.PropertyDef = propertyDef;
+							// Console.WriteLine($"DEBUG: Found propertyDef of {propertyDef.PropertyName} for parameterName:{parameterDef.ParameterName} in function {functionName}.");
+						}
+						else {
+							Console.WriteLine($"Warning:  Could not find a propertyDef for parameterName:{parameterDef.ParameterName} in function {functionName}.");
 						}
 
 						functionDef.ArgumentDefList.Add(argumentDef);	
@@ -115,22 +131,55 @@ namespace TidalCSharp {
 					foreach (FieldDef fieldDef in procedureDef.FieldDefMap.Values) {
 						string fieldName = fieldDef.FieldName;
 
-						PropertyDef propertyDef = modelDef.GetLikelyPropertyDef(fieldName);
+						string convertedFieldName = NameMapping.MakeCleanColumnName(tableMappingList, fieldDef.BaseTableName, fieldName, cleanOracle); 
 
+						PropertyDef propertyDef = modelDef.GetLikelyPropertyDef(convertedFieldName);
+
+						/* We can easily get a field that is several layers back from our root object from joins
+						 * in the query.
+						 * for example Book.Author.City.State.Country.CountryName, and the query returns CountryName.
+						 * We need to work down through the object graph to find the model that matches the table
+						 * which that field is using.
+						 * It may be that in the initial procedure read when we query the first recordset, with a browse value that 
+						 * returns join columns, that we can use that information to traverse the model tree more
+						 * directly.
+						 */
+						List<PropertyDef> propertyDefChain = null;
 						if (propertyDef == null) {
+
+							var referencedModelName = NameMapping.MakeCleanTableName(tableMappingList, fieldDef.BaseTableName, cleanOracle);
+
+							// Console.WriteLine($"DEBUG:convertedFieldName:{convertedFieldName}, fieldDef.BaseTableName={fieldDef.BaseTableName}, referencedModelName={referencedModelName}");
+							if (modelDefMap.ContainsKey(referencedModelName) == true) {
+							
+								var referencedModelDef = modelDefMap[referencedModelName];
+
+								propertyDefChain = modelDef.ScanForLikelyPropertyDef(new List<PropertyDef>(), convertedFieldName, referencedModelDef, modelDefMap.Values.ToList<ModelDef>());
+								if (propertyDefChain != null) {
+									//Console.WriteLine($"DEBUG: Found propertydef chain! fieldName:{convertedFieldName} in procedure {procedureDef.ProcedureName}");
+									//propertyDefChain.ForEach(x => {
+									//	Console.WriteLine($"{x.PropertyTypeNamespace}.{x.PropertyTypeCode} {x.PropertyName}");
+									//});
+								}
+							}
+						}
+
+						/* if we didn't find a propertydef nor a propertydefchain, then it belongs as part of a function-specific Result output */
+						if (propertyDef == null && propertyDefChain == null) {
 							if (functionDef.UsesResult == false) {
 								functionDef.UsesResult = true;
 								functionDef.ResultPropertyDefList = new List<ResultPropertyDef>();
 							}
 							functionDef.ResultPropertyDefList.Add(new ResultPropertyDef { 
-								PropertyName = CleanPropertyName(fieldName),
+								PropertyName = CleanPropertyName(convertedFieldName),
 								PropertyTypeCode = fieldDef.DataTypeCode,
 								FieldDef = fieldDef});
+							Console.WriteLine($"Warning:  Could not find a propertyDef for fieldName \"{convertedFieldName}\" in procedure \"{procedureDef.ProcedureName}\".  " + 
+							                  $"The base table name for this field at the SQL level was \"{fieldDef.BaseTableName}\".  " + 
+							                  $"The converted model name was computed as \"{NameMapping.MakeCleanTableName(tableMappingList, fieldDef.BaseTableName, cleanOracle)}\".  " + 
+							                  $"This field will be included as a property in a result class labeled \"{functionDef.FunctionName}Result\" created just for the output of this function.");
 						}
-
-			/* TODO: we can easily have fields that are not part of the model class (as well as parameters that don't match either).
-					These fields would go in a separate special result class. For now we assume they ARE in the model. */
-
+					
 
 
 	/* TODO: Commented the type check because it couldn't resolve object v. key value.  May not be necessary really.
@@ -146,6 +195,7 @@ namespace TidalCSharp {
 
 						// propertyDef.FieldDefList.Add(fieldDef);
 						fieldDef.PropertyDef = propertyDef;
+						fieldDef.PropertyDefChain = propertyDefChain;
 						functionDef.OutputPropertyDefList.Add(propertyDef);
 
 						if (modelDef.FieldDefMap.ContainsKey(fieldDef.FieldName)) {

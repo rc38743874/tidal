@@ -66,11 +66,20 @@ namespace TidalCSharp {
 						conn = processor.GetConnection(tidalOptions.ConnectionString, tidalOptions.Password);
 					}
 
+
+					Console.WriteLine("***" + tidalOptions.TranslationFileName);
+					List<TableMapping> tableMappingList = null;
+					if (tidalOptions.TranslationFileName != null) {
+						tableMappingList = MappingFileReader.ReadFromFile(tidalOptions.TranslationFileName);
+					}
+
 					using (conn) {
 						if (conn != null) {
 							Console.WriteLine("opening connection");
 							conn.Open();
 						}
+
+
 
 						List<TableDef> tableDefList = null;
 						TableDefMap tableDefMap = null;
@@ -85,7 +94,7 @@ namespace TidalCSharp {
 
 							if (tidalOptions.ShouldMakeTableDefMap == true) {
 								Console.WriteLine("extracting table data with " + extractor.GetType());
-								tableDefMap = extractor.ExtractTableData();
+								tableDefMap = extractor.ExtractTableData(tableMappingList, tidalOptions.CleanOracle);
 
 								if (tidalOptions.TableDefFileNameOut != null) {
 									Console.WriteLine("writing table def file");
@@ -138,7 +147,7 @@ namespace TidalCSharp {
 						if (tidalOptions.ModuleName != null) {
 							Console.WriteLine("calcing stored proc script");
 							IProcedureCreator procCreator = processor.GetProcedureCreator();
-							string storedProcedureSQLText = procCreator.GetStoredProcedureScriptText(tidalOptions.ModuleName, tableDefList, 1);
+							string storedProcedureSQLText = procCreator.GetStoredProcedureScriptText(tidalOptions.ModuleName, tableDefList, 1, tidalOptions.IgnoreTableNameList);
 
 
 							// Console.WriteLine(storedProcedureSQLText);
@@ -171,30 +180,38 @@ namespace TidalCSharp {
 							/* read stored procedures and generate stored procedure defs */
 							IProcedureReader procReader = processor.GetProcedureReader();
 							procedureDefList = procReader.MakeProcedureDefList(databaseName, tidalOptions.ModuleName, tableDefMap);
-						}
 
-						if (tidalOptions.StoredProcDefFileNameOut != null) {
-							Console.WriteLine("writing stored proc definition json file");
-							var sbSPJson = new StringBuilder("[");
-							bool first = true;
-							foreach (var procedureDef in procedureDefList) {
-								if (first == true) first = false; else sbSPJson.AppendLine(",");
-								sbSPJson.Append(procedureDef.ToJSONString());
+
+							if (tidalOptions.StoredProcDefFileNameOut != null) {
+								Console.WriteLine("writing stored proc definition json file");
+								var sbSPJson = new StringBuilder("[");
+								bool first = true;
+								foreach (var procedureDef in procedureDefList) {
+									if (first == true) first = false; else sbSPJson.AppendLine(",");
+									sbSPJson.Append(procedureDef.ToJSONString());
+								}
+								sbSPJson.Append("]");
+								File.WriteAllText(tidalOptions.StoredProcDefFileNameOut, sbSPJson.ToString());
 							}
-							sbSPJson.Append("]");
-							File.WriteAllText(tidalOptions.StoredProcDefFileNameOut, sbSPJson.ToString());
 						}
 
 
 						if (tidalOptions.DataAccessFileNameOut != null) {
 							/* convert the procedures, parameters, and outputs into function calls and arguments */
-							List<ModelDef> modelDefList = FunctionCreator.CreateModelDefList(tidalOptions.ModelsNamespace, tidalOptions.ModuleName, modelDefMap, procedureDefList);
+							List<ModelDef> modelDefList = FunctionCreator.CreateModelDefList(
+								tidalOptions.ModelsNamespace, 
+								tidalOptions.ModuleName, 
+								modelDefMap, 
+								procedureDefList, 
+								tidalOptions.IgnoreTableNameList,
+								tableMappingList,
+								tidalOptions.CleanOracle);
 
 							/* combine with stored proc defs to create DataAccess class */
 							ClassCreatorBase classCreator = processor.GetClassCreator();
-							string classText = classCreator.GetDataAccessClassText(tidalOptions.ProjectNamespace, modelDefList);
+							string allText = classCreator.GetAllText(tidalOptions.ProjectNamespace, modelDefList);
 
-							File.WriteAllText(tidalOptions.DataAccessFileNameOut, classText);
+							File.WriteAllText(tidalOptions.DataAccessFileNameOut, allText);
 						}
 
 						if (conn != null) conn.Close();

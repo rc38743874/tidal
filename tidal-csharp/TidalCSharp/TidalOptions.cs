@@ -6,16 +6,16 @@ namespace TidalCSharp {
 	public class TidalOptions {
 
 		private OptionSet optionSet;
-		
+
 		public DatabaseTypeEnum DatabaseType { get; set; }
-		public string DataAccessFileNameOut { get; set; } 
+		public string DataAccessFileNameOut { get; set; }
 		public string TableDefFileNameOut { get; set; }
 		public string TableDefFileNameIn { get; set; }
 		public string TableCreateScriptFileName { get; set; }
-        public string TableDropScriptFileName { get; set; }
+		public string TableDropScriptFileName { get; set; }
 		public string SQLScriptFileNameOut { get; set; }
 		public string SQLScriptFileNameIn { get; set; }
-		public string ModelsPathOut { get; set; } 
+		public string ModelsPathOut { get; set; }
 		public bool RemoveProcedures { get; set; }
 		public bool CreateProcedures { get; set; }
 		public string StoredProcDefFileNameOut { get; set; }
@@ -26,10 +26,16 @@ namespace TidalCSharp {
 		public string ModelDefFileNameOut { get; set; }
 		public string ConnectionString { get; set; }
 
+		public string TranslationFileName { get; set; }
+		public string WhiteListFileName { get; set; }
+		public string GenerateWhiteListFileName { get; set; }
+		public bool CleanOracle { get; set; }
+
 		/* TODO: Remove ModelsNamespace if we really didn't use it */
 		public string ModelsNamespace { get; set; }
 
 		public List<string> ModelsAssemblyFileNameList = new List<string> ();
+		public List<string> IgnoreTableNameList = new List<string>();
 		public string ModuleName { get; set; }
 		public string ProjectNamespace { get; set; }
 		public bool Verbose { get; set; }
@@ -41,29 +47,35 @@ namespace TidalCSharp {
 		public TidalOptions ()
 		{
 			this.optionSet = new OptionSet {
-				{ "o|out=", "path/filename of the generated code DataAccess class.", o => this.DataAccessFileNameOut = o},
-				{ "t|tableout=", "path/filename to save table schema definitions.", t => this.TableDefFileNameOut = t },
-				{ "T|tablein=", "path/filename to read table schema definitions.", T => this.TableDefFileNameIn = T },
+				{ "a|modelsdll=", "path/filename of external assembly containing models", a => this.ModelsAssemblyFileNameList.Add(a) },
 				{ "b|tablecreatescript=", "path/filename to write out .sql table creation script ", b => this.TableCreateScriptFileName = b },
 				{ "B|tabledropscript=", "path/filename to write out .sql table drop script ", B => this.TableDropScriptFileName = B },
-				{ "q|sqlout=", "path/filename to save optional copy of stored procedures.", q => this.SQLScriptFileNameOut = q },
-				{ "Q|sqlin=", "path/filename from which to read stored procedure creation .sql script", Q => this.SQLScriptFileNameIn = Q},
-				{ "m|makemodels=", "generate and save fresh models into this path.", m => this.ModelsPathOut = m},
-				{ "r|removeproc", "remove existing Tidal stored procedures for this module in the database", r => this.RemoveProcedures = (r != null)},
 				{ "c|createproc", "automatically execute stored procedure script", c => this.CreateProcedures = (c != null)},
-				{ "s|storedprocout=", "path/filename to save stored procedure descriptions .json file", s => this.StoredProcDefFileNameOut = s},
-				{ "S|storedprocin=", "path/filename from which to read stored procedure descriptions", S => this.StoredProcDefFileNameIn = S},
-				{ "p|prompt", "enter password via prompt", p => this.PasswordPrompt = (p!=null) },
-				{ "P|password=", "password to connect to database", P => this.Password = P },
+				{ "C|conn=", "connection string to database", C => this.ConnectionString = C},
 				{ "d|modelout=", "path/filename to save model descriptions .json file", d => this.ModelDefFileNameOut = d},
 				{ "D|modelin=", "path/filename from which to read model descriptions", D => this.ModelDefFileNameIn = D},
-				{ "C|conn=", "connection string to database", C => this.ConnectionString = C},
-				{ "N|modelsns=", "models namespace for generated and/or imported models", N => this.ModelsNamespace = N},
-				{ "a|modelsdll=", "path/filename of external assembly containing models", a => this.ModelsAssemblyFileNameList.Add(a) },
-				{ "u|modulename=", "module name for tagging stored procedures", u => this.ModuleName = u},
-				{ "n|namespace=", "project namespace for output DataAccess class", n => this.ProjectNamespace = n},
-				{ "v|verbose", "verbose messages", v => this.Verbose = (v != null) },
 				{ "h|help", "show this message and exit", h => this.ShouldShowHelp = (h != null) },
+				{ "i|ignore=", "ignore these tables (multiple -i allowed)", i => this.IgnoreTableNameList.Add(i) },
+				{ "m|makemodels=", "generate and save fresh models into this path.", m => this.ModelsPathOut = m},
+				{ "M|namemapfile=", "path/filename containing mappings of names", M => this.TranslationFileName = M},
+				{ "n|namespace=", "project namespace for output DataAccess class", n => this.ProjectNamespace = n},
+				{ "N|modelsns=", "models namespace for generated and/or imported models", N => this.ModelsNamespace = N},
+				{ "o|out=", "path/filename of the generated code DataAccess class.", o => this.DataAccessFileNameOut = o},
+				{ "O|oracle", "process tables and column names that have been targeted to Oracle", O => this.CleanOracle = (O != null)},
+				{ "p|prompt", "enter password via prompt", p => this.PasswordPrompt = (p!=null) },
+				{ "P|password=", "password to connect to database", P => this.Password = P },
+				{ "q|sqlout=", "path/filename to save optional copy of stored procedures.", q => this.SQLScriptFileNameOut = q },
+				{ "Q|sqlin=", "path/filename from which to read stored procedure creation .sql script", Q => this.SQLScriptFileNameIn = Q},
+				{ "r|removeproc", "remove existing Tidal stored procedures for this module in the database", r => this.RemoveProcedures = (r != null)},
+				{ "s|storedprocout=", "path/filename to save stored procedure descriptions .json file", s => this.StoredProcDefFileNameOut = s},
+				{ "S|storedprocin=", "path/filename from which to read stored procedure descriptions", S => this.StoredProcDefFileNameIn = S},
+				{ "t|tableout=", "path/filename to save table schema definitions.", t => this.TableDefFileNameOut = t },
+				{ "T|tablein=", "path/filename to read table schema definitions.", T => this.TableDefFileNameIn = T },
+				{ "u|modulename=", "module name for tagging stored procedures", u => this.ModuleName = u},
+				{ "v|verbose", "verbose messages", v => this.Verbose = (v != null) },
+				{ "w|whitelist=", "path/filename of whitelist allowing only some stored procedures", w => this.WhiteListFileName = w },
+				{ "W|genwhiteList=", "path/filename of list containing all possibilities to use for a white list", w => this.GenerateWhiteListFileName = w },
+
 			};
 		}
 
