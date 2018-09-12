@@ -37,6 +37,7 @@ namespace TidalCSharp {
 				case "char":
 				case "nvarchar":
 				case "nchar":
+				case "sysname": /* TODO: not sure how sysname gets here, if string will work? */
 				case "xml":
 					return "string";
 				case "real":
