@@ -22,6 +22,7 @@ namespace TidalCSharp {
 					if (x == "API") return "API";
 					if (x == "GPO") return "GPO";
 					if (x == "NUM") return "Number";
+					if (x == "AMT") return "Amount";
 					return Char.ToUpperInvariant(x[0]) + x.Substring(1).ToLowerInvariant();
 				}));
 			}
