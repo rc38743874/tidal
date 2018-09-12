@@ -13,55 +13,60 @@ namespace TidalCSharp {
 				directory += Path.DirectorySeparatorChar;
 			}
 			foreach (var tableDef in tableDefList.OrderBy(x => x.TableName)) {
+				/* TODO: For now we skip views, but should we? */
+				if (tableDef.TableType == "TABLE") {
+					Console.WriteLine("Making model from table " + tableDef.TableName);
 
-                Console.WriteLine("Making model from table " + tableDef.TableName);
+					var modelName = NameMapping.MakeCleanTableName(tableMappingList, tableDef.TableName, cleanOracle);
+					Console.WriteLine($"\tusing model name {modelName}");
 
-				var modelName = NameMapping.MakeCleanTableName(tableMappingList, tableDef.TableName, cleanOracle);
-				Console.WriteLine($"\tusing model name {modelName}");
+					StringBuilder buildText = new StringBuilder();
 
-				StringBuilder buildText = new StringBuilder();
+					buildText.AppendLine("namespace " + namespaceText + " {\n");
+					buildText.AppendLine("\tpublic class " + modelName + " {\n");
+					buildText.AppendLine();
 
-				buildText.AppendLine("namespace " + namespaceText + " {\n");
-				buildText.AppendLine("\tpublic class " + modelName + " {\n");
-				buildText.AppendLine();
+					bool needsSystem = false;
 
-				bool needsSystem = false;
+					foreach (var columnDef in tableDef.ColumnDefMap.Values) {
 
-				foreach (var columnDef in tableDef.ColumnDefMap.Values) {
+						string columnTypeCode;
+						string columnName = columnDef.ColumnName;
 
-					string columnTypeCode;
-					string columnName = columnDef.ColumnName;
-
-					string convertedColumnName = NameMapping.MakeCleanColumnName(tableMappingList, tableDef.TableName, columnName, cleanOracle); 
+						string convertedColumnName = NameMapping.MakeCleanColumnName(tableMappingList, tableDef.TableName, columnName, cleanOracle);
 
 
-					if (columnDef.ReferencedTableDef != null) {
-						if (convertedColumnName.EndsWith("Key", StringComparison.InvariantCultureIgnoreCase)) {
-							convertedColumnName = convertedColumnName.Substring(0, columnName.Length - 3);
+						if (columnDef.ReferencedTableDef != null) {
+							if (convertedColumnName.EndsWith("Key", StringComparison.InvariantCultureIgnoreCase)) {
+								convertedColumnName = convertedColumnName.Substring(0, convertedColumnName.Length - 3);
+							}
+							var rawReferencedTableName = columnDef.ReferencedTableDef.TableName;
+							columnTypeCode = NameMapping.MakeCleanTableName(tableMappingList, rawReferencedTableName, cleanOracle);
+						} else {
+							columnTypeCode = TypeConvertor.ConvertSQLToCSharp(columnDef.ColumnType);
+							if (columnTypeCode == "DateTime") needsSystem = true;
+							if (columnTypeCode.Contains("[]")) {
+								needsSystem = true;
+							}
+							else {
+								if (columnDef.IsNullable && columnTypeCode != "string") columnTypeCode += "?";
+							}
 						}
-						columnTypeCode = columnDef.ReferencedTableDef.TableName;
-					}
-					else {
-						columnTypeCode = TypeConvertor.ConvertSQLToCSharp(columnDef.ColumnType);
-						if (columnTypeCode == "DateTime") needsSystem = true;
-						if (columnDef.IsNullable && columnTypeCode!="string") columnTypeCode += "?";
+
+
+
+						buildText.AppendLine("\t\tpublic " + columnTypeCode + " " + convertedColumnName + " { get; set; }");
 					}
 
+					buildText.AppendLine("\t}");
+					buildText.Append("}");
 
+					if (needsSystem) {
+						buildText.Insert(0, "using System;" + Environment.NewLine);
+					}
 
-					buildText.AppendLine("\t\tpublic " + columnTypeCode + " " + convertedColumnName + " { get; set; }");
+					File.WriteAllText(directory + modelName + ".cs", buildText.ToString());
 				}
-
-				buildText.AppendLine("\t}");	
-				buildText.Append("}");
-
-				if (needsSystem) {
-					buildText.Insert(0, "using System;" + Environment.NewLine);
-				}
-
-				File.WriteAllText(directory + modelName + ".cs", buildText.ToString());
-
-
 
 			}	
 
