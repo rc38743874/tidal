@@ -23,7 +23,7 @@ namespace TidalCSharp {
 					StringBuilder buildText = new StringBuilder();
 
 					buildText.AppendLine("namespace " + namespaceText + " {\n");
-					buildText.AppendLine("\tpublic class " + modelName + " {\n");
+					buildText.AppendLine("\tpublic partial class " + modelName + " {\n");
 					buildText.AppendLine();
 
 					bool needsSystem = false;
