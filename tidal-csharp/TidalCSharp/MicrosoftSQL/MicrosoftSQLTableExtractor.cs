@@ -294,9 +294,7 @@ namespace TidalCSharp {
 					if (tableMapping.ColumnArray != null) {
 						var mapping = tableMapping.ColumnArray.FirstOrDefault(x => x.ColumnName == columnName);
 						if (mapping != null) {
-							if (mapping.ForceToBit != null) {
-								return mapping.ForceToBit;
-							}
+							return mapping.ForceToBit;
 						}
 					}
 				}

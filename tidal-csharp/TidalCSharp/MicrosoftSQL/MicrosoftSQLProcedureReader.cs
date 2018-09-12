@@ -246,7 +246,7 @@ namespace TidalCSharp {
 							string dataTypeCode;
 							try {
 								dataTypeCode = TypeConvertor.ConvertSQLToCSharp(sqlDataTypeCode);
-							} catch (Exception ex) {
+							} catch {
 								Console.WriteLine("last call to ConvertSQLToCSharp was for procedure " + procedureDef.ProcedureName + ", field named \"" + fieldName + "\".  This can happen if you have a stored procedure that is referencing a column that no longer exists for a table.  Check that the procedure will run on its own.");
 								throw;
 							}

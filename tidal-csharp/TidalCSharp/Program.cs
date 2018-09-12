@@ -121,7 +121,11 @@ namespace TidalCSharp {
 
 							if (tidalOptions.ModelsPathOut != null) {
 								Console.WriteLine("making models");
-								ModelCreator.MakeModels(tableDefList, tidalOptions.ModelsNamespace, tidalOptions.ModelsPathOut);
+								ModelCreator.MakeModels(tableDefList, 
+											tidalOptions.ModelsNamespace, 
+											tidalOptions.ModelsPathOut,
+											tableMappingList,
+											tidalOptions.CleanOracle);
 							}
 						}
 
