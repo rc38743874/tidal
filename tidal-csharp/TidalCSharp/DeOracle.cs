@@ -13,7 +13,12 @@ namespace TidalCSharp {
 			if (hasLowercase) {
 				return String.Join("", array.Select(x => Char.ToUpperInvariant(x[0]) + x.Substring(1)));
 			} else {
-				return String.Join("", array.Select(x => Char.ToUpperInvariant(x[0]) + x.Substring(1).ToLowerInvariant()));
+				return String.Join("", array.Select(x => {
+					if (x == "ID") return "ID";
+					if (x == "XML") return "XML";
+					if (x == "URL") return "URL";
+					return Char.ToUpperInvariant(x[0]) + x.Substring(1).ToLowerInvariant();
+				}));
 			}
 		}
 
