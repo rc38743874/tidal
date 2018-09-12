@@ -161,7 +161,8 @@ namespace TidalCSharp {
 					dataLength = (short)row["CHARACTER_MAXIMUM_LENGTH"];
 				}
 
-				string cleanName = NameMapping.MakeCleanColumnName(tableMappingList, tableName, columnName, cleanOracle);
+				string modelName = NameMapping.MakeCleanTableName(tableMappingList, tableName, cleanOracle);
+				string cleanName = NameMapping.MakeCleanColumnName(tableMappingList, tableName, modelName, columnName, cleanOracle);
 
 				bool forceToBit = false;
 				if (cleanOracle == true) {

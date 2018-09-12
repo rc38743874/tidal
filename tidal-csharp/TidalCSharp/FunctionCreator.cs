@@ -131,7 +131,7 @@ namespace TidalCSharp {
 					foreach (FieldDef fieldDef in procedureDef.FieldDefMap.Values) {
 						string fieldName = fieldDef.FieldName;
 
-						string convertedFieldName = NameMapping.MakeCleanColumnName(tableMappingList, fieldDef.BaseTableName, fieldName, cleanOracle); 
+						string convertedFieldName = NameMapping.MakeCleanColumnName(tableMappingList, fieldDef.BaseTableName, modelDef.ModelName, fieldName, cleanOracle); 
 
 						PropertyDef propertyDef = modelDef.GetLikelyPropertyDef(convertedFieldName);
 

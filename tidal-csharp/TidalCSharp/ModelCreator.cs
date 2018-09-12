@@ -33,7 +33,7 @@ namespace TidalCSharp {
 						string columnTypeCode;
 						string columnName = columnDef.ColumnName;
 
-						string convertedColumnName = NameMapping.MakeCleanColumnName(tableMappingList, tableDef.TableName, columnName, cleanOracle);
+						string convertedColumnName = NameMapping.MakeCleanColumnName(tableMappingList, tableDef.TableName, modelName, columnName, cleanOracle);
 
 
 						if (columnDef.ReferencedTableDef != null) {

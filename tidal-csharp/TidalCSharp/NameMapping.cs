@@ -9,7 +9,7 @@ namespace TidalCSharp {
 			return prefix + tableDef.CleanName;
 		}
 
-		public static string MakeCleanColumnName(List<TableMapping> tableMappingList, string tableName, string columnName, bool cleanOracle) {
+		public static string MakeCleanColumnName(List<TableMapping> tableMappingList, string tableName, string modelName, string columnName, bool cleanOracle) {
 			if (tableMappingList != null) {
 				var tableMapping = tableMappingList.FirstOrDefault(x => x.TableName == tableName);
 				if (tableMapping != null) {
@@ -23,10 +23,21 @@ namespace TidalCSharp {
 					}
 				}
 			}
+			string desiredColumnName;
 			if (cleanOracle == true) {
-				return DeOracle.Clean(columnName);
+				desiredColumnName = DeOracle.Clean(columnName);
 			}
-			return columnName;
+			else {
+				desiredColumnName = columnName;
+			}
+
+			/* TODO: I'd like to lookup Code and Name in some list to see if they already exist and use the other */
+			if (desiredColumnName == modelName) {
+				desiredColumnName += "Name";
+			}
+	
+
+			return desiredColumnName;
 		}
 
 
