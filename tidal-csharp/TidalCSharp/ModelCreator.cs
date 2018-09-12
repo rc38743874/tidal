@@ -59,7 +59,7 @@ namespace TidalCSharp {
 					buildText.Insert(0, "using System;" + Environment.NewLine);
 				}
 
-				File.WriteAllText(directory + tableDef.TableName + ".cs", buildText.ToString());
+				File.WriteAllText(directory + modelName + ".cs", buildText.ToString());
 
 
 
