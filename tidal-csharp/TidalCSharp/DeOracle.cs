@@ -14,9 +14,12 @@ namespace TidalCSharp {
 				return String.Join("", array.Select(x => Char.ToUpperInvariant(x[0]) + x.Substring(1)));
 			} else {
 				return String.Join("", array.Select(x => {
+					/* TODO: map these probably */
 					if (x == "ID") return "ID";
 					if (x == "XML") return "XML";
 					if (x == "URL") return "URL";
+					if (x == "HTML") return "HTML";
+					if (x == "API") return "API";
 					return Char.ToUpperInvariant(x[0]) + x.Substring(1).ToLowerInvariant();
 				}));
 			}
