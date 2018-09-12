@@ -15,10 +15,10 @@ namespace TidalCSharp {
 			foreach (var tableDef in tableDefList.OrderBy(x => x.TableName)) {
 				/* TODO: For now we skip views, but should we? */
 				if (tableDef.TableType == "TABLE") {
-					Console.WriteLine("Making model from table " + tableDef.TableName);
+					Console.Write("Making model from table " + tableDef.TableName);
 
 					var modelName = NameMapping.MakeCleanTableName(tableMappingList, tableDef.TableName, cleanOracle);
-					Console.WriteLine($"\tusing model name {modelName}");
+					Console.WriteLine($" using model name {modelName}");
 
 					StringBuilder buildText = new StringBuilder();
 
@@ -49,6 +49,9 @@ namespace TidalCSharp {
 								needsSystem = true;
 							}
 							else {
+								if (columnDef.ForceToBit == true) {
+									columnTypeCode = "bool";
+								}
 								if (columnDef.IsNullable && columnTypeCode != "string") columnTypeCode += "?";
 							}
 						}
