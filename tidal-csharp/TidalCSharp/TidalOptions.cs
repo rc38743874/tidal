@@ -230,7 +230,7 @@ namespace TidalCSharp {
 				this.ShouldMakeProcedureDefList = true;
 				if (this.ProjectNamespace  ==  null) {
 					wasOkay = false;
-					Console.WriteLine ("Option -o to output a DataAccess file requires a project namespace to be specified with -n.");
+					Console.WriteLine("Option -o to output a DataAccess file requires a project namespace to be specified with -n.");
 				}
 
 			}
@@ -274,12 +274,12 @@ namespace TidalCSharp {
 
 			if (this.PasswordPrompt == true && this.ConnectionString == null) {
 				wasOkay = false;
-				Console.WriteLine ("Option -p or --prompt to prompt for a password requires a connection string (-C or --conn).");
+				Console.WriteLine("Option -p or --prompt to prompt for a password requires a connection string (-C or --conn).");
 			}
 
 			if (this.Password != null && this.ConnectionString == null) {
 				wasOkay = false;
-				Console.WriteLine ("Option -P or --password to supply a password requires a connection string (-C or --conn).");
+				Console.WriteLine("Option -P or --password to supply a password requires a connection string (-C or --conn).");
 			}
 
 			if (this.ConnectionString != null && this.Password == null && this.PasswordPrompt == false) {

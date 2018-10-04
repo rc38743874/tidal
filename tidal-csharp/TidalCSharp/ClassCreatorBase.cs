@@ -264,17 +264,20 @@ namespace TidalCSharp {
 			if (functionDef.ArgumentDefList.Any(x => x.PropertyDef != null)) {
 
 				string functionSignatureWithObject = functionString + GetObjectArgument(modelDef, namespaceTagMap)
-					    + GetArgumentsNotInObject(functionDef);
+					    + GetArgumentsNotInObject(functionDef)
+						+ ")";
 
 				internalInterfaceText.AppendLine("\t\t\t" + functionSignatureWithObject + ";");
 				internalInterfaceText.AppendLine();
 			
 				buildText.AppendLine("\t\t\tpublic " + functionSignatureWithObject + " {");
 				buildText.Append("\t\t\t\t");
+				buildText.AppendLine($"var actionObject = new {modelDef.ModelName}();");
+				buildText.Append("\t\t\t\t");
 				if (functionDef.ReturnTypeCode != null) {
 					buildText.Append("return ");
 				}
-				buildText.AppendLine(modelDef.ModelName + "." + functionDef.FunctionName + "(conn, trans,");
+				buildText.AppendLine("actionObject." + functionDef.FunctionName + "(conn, trans,");
 				AddFunctionArguments(buildText, modelDef, functionDef);
 
 				buildText.AppendLine("\t\t\t}");
@@ -351,18 +354,22 @@ namespace TidalCSharp {
 			/* Only use the Object input version if there are fields that come from the object */
 			if (functionDef.ArgumentDefList.Any(x => x.PropertyDef != null)) {
 
-//				string functionSignatureWithObject = functionString + GetObjectArgument(modelDef, namespaceTagMap)
-//					    + GetArgumentsNotInObject(functionDef);
-
-				string functionSignatureWithObject = functionString + GetObjectArgument(modelDef, namespaceTagMap) + ")";
+				string functionSignatureWithObject = functionString + GetObjectArgument(modelDef, namespaceTagMap)
+										+ GetArgumentsNotInObject(functionDef)
+										+ ")";
 
 				internalInterfaceText.AppendLine("\t\t\t" + functionSignatureWithObject + ";");
 				internalInterfaceText.AppendLine();
 
-				buildText.Append("\t\t\tpublic " + functionSignatureWithObject + " {");
-				buildText.AppendLine("\t\t\t\treturn " + modelDef.ModelName + "." + functionDef.FunctionName + "(conn, trans,");
+				buildText.AppendLine("\t\t\tpublic " + functionSignatureWithObject + " {");
+				buildText.AppendLine($"\t\t\t\tvar actionObject = new {modelDef.ModelName}();");
+				buildText.AppendLine($"\t\t\t\treturn actionObject.{functionDef.FunctionName}(conn,");
+				buildText.AppendLine($"\t\t\t\t\t\ttrans,");
 				AddFunctionArguments(buildText, modelDef, functionDef);
 				buildText.AppendLine("\t\t\t}");
+
+
+
 			}
 		}
 
@@ -388,6 +395,15 @@ namespace TidalCSharp {
 			StringBuilder buildText = new StringBuilder();
 			foreach (ArgumentDef argumentDef in functionDef.ArgumentDefList) {
 				buildText.AppendLine(",");
+				bool isNullable = argumentDef.IsNullable;
+				//if (argumentDef.PropertyDef != null) {
+				//	if (argumentDef.PropertyDef.PropertyTypeCode.EndsWith("?")) {
+				//		if (isNullable == false) {
+				//			Shared.Warning($"Remapping argument {argumentDef.ArgumentName} to nullable based on corresponding propertydef with type {argumentDef.PropertyDef.PropertyTypeCode}.");
+				//			isNullable = true;
+				//		}
+				//	}
+				//}
 				buildText.Append("\t\t\t\t\t\t" + OutputNullableType(argumentDef.ArgumentTypeCode, argumentDef.IsNullable) + " " + argumentDef.ArgumentName);
 			}
 			return buildText.ToString();
@@ -397,8 +413,7 @@ namespace TidalCSharp {
 			StringBuilder buildText = new StringBuilder();
 			buildText.AppendLine(",");
 			buildText.Append("\t\t\t\t\t\t");
-			buildText.AppendLine(namespaceTagMap[modelDef.Namespace] + "." + modelDef.ModelName + " inputObject");
-			buildText.AppendLine();
+			buildText.Append(namespaceTagMap[modelDef.Namespace] + "." + modelDef.ModelName + " inputObject");
 			return buildText.ToString();
 		}
 
@@ -429,9 +444,9 @@ namespace TidalCSharp {
 				if (propertyDef == null) {
 					/* display a friendly warning if the field might be missing in the target class */
 					if (argumentDef.ArgumentName.EndsWith("Key", false, CultureInfo.InvariantCulture)) {
-						Console.WriteLine("Warning: Argument " + argumentDef.ArgumentName + " in function " + functionDef.FunctionName + " for " + functionDef.ProcedureDef.ProcedureName + " had a null PropertyDef.  Perhaps a foreign key reference doesn't exist on that column of the database table?");
+						Shared.Warning("Argument " + argumentDef.ArgumentName + " in function " + functionDef.FunctionName + " for " + functionDef.ProcedureDef.ProcedureName + " could not be found as a property of the model.  Perhaps a foreign key reference doesn't exist on that column of the database table?");
 					} else {
-						Console.WriteLine("Warning: Argument " + argumentDef.ArgumentName + " in function " + functionDef.FunctionName + " for " + functionDef.ProcedureDef.ProcedureName + " had a null PropertyDef.  Should the column exist in the model class but is missing?  Perhaps it is spelled differently and needs an entry in the mapping file referenced by --namemapfile?");
+						Shared.Warning("Argument " + argumentDef.ArgumentName + " in function " + functionDef.FunctionName + " for " + functionDef.ProcedureDef.ProcedureName + " could not be found as a property of the model.  This is normal when the stored procedure uses this field within the procedure as an external value that lives outside the table.  If not, please verify:" + Environment.NewLine + "\t\tShould the column exist in the model class but is missing?" + Environment.NewLine + "\t\tPerhaps it is spelled differently and needs an entry in the mapping file referenced by --namemapfile?");
 					}
 					buildText.Append(argumentDef.ArgumentName);
 				} else {
@@ -469,14 +484,14 @@ namespace TidalCSharp {
 					buildText.AppendLine("\t\t\t\t\tcommand.Parameters.Add(outParameter);");
 				} else {
 					buildText.Append("\t\t\t\t\tcommand.Parameters.Add(new " + this.GetSqlParameterText() + "(\"" + parameterDef.ParameterName + "\", ");
-					/* TODO: arguments are not getting set to Nullable:true, but this would probably work for everything no? */
-					buildText.Append("(object) " + argumentDef.ArgumentName + " ?? DBNull.Value");
-					//if (argumentDef.IsNullable == true) {
-					//	buildText.Append("(object) " + argumentDef.ArgumentName + " ?? DBNull.Value");
-					//}
-					//else {
-					//  buildText.Append(argumentDef.ArgumentName);
-					//}
+					
+					// buildText.Append("(object) " + argumentDef.ArgumentName + " ?? DBNull.Value");
+					if (parameterDef.IsNullable == true) {
+						buildText.Append("(object) " + argumentDef.ArgumentName + " ?? DBNull.Value");
+					}
+					else {
+						buildText.Append(argumentDef.ArgumentName);
+					}
 					buildText.AppendLine("));");
 				}
 			}
@@ -559,7 +574,7 @@ namespace TidalCSharp {
 						/* e.g. Book table has a field for AuthorName, which would be in the Author table */
 						buildText.AppendLine("\t\t\t\t\t\tif (outputObject." + propertyDef.PropertyName + " == null) {");
 
-						//					Console.WriteLine($"DEBUG:fieldDef.FieldName={fieldDef.FieldName}, modelDef.ModelName={modelDef.ModelName}, propertyDef.PropertyName={propertyDef.PropertyName}, propertyDef.PropertyTypeNamespace={propertyDef.PropertyTypeNamespace}, fieldDef.BaseTableName={fieldDef.BaseTableName}");
+						//					Shared.Info($"DEBUG:fieldDef.FieldName={fieldDef.FieldName}, modelDef.ModelName={modelDef.ModelName}, propertyDef.PropertyName={propertyDef.PropertyName}, propertyDef.PropertyTypeNamespace={propertyDef.PropertyTypeNamespace}, fieldDef.BaseTableName={fieldDef.BaseTableName}");
 						buildText.AppendLine("\t\t\t\t\t\t\toutputObject." + propertyDef.PropertyName + " = new " + namespaceTagMap[propertyDef.PropertyTypeNamespace] + "." + fieldDef.BaseTableName + "();");
 						buildText.AppendLine("\t\t\t\t\t\t}");
 						buildText.AppendLine("\t\t\t\t\t\tDataAccess." + fieldDef.BaseTableName + ".FillField(outputObject." + propertyDef.PropertyName + ", \"" + fieldDef.FieldName + "\", value);");
@@ -604,7 +619,13 @@ namespace TidalCSharp {
 					if (propertyDef.PropertyTypeCode == "string") {
 						buildText.Append("UnNullString(value)");
 					} else {
-						OutputUnNull(buildText, propertyDef.PropertyTypeCode, "value");
+						/* we do this because an int doubling for a bit with forcebit can't return an actual non-nullable bit */
+						if (propertyDef.PropertyTypeCode.EndsWith("?") == true) {
+							OutputUnNull(buildText, propertyDef.PropertyTypeCode, "value");
+						}
+						else {
+							buildText.Append("(" + propertyDef.PropertyTypeCode + ")value");
+						}
 					}
 					buildText.AppendLine(";");
 				} else {

@@ -28,7 +28,7 @@ namespace TidalCSharp {
 
 			for (int index = 0; index < array.Length; index ++) {
 				string execText = array[index];
-				Console.Write("Executing script command #" + (index + 1) + " of " + array.Length + "...");
+				Shared.Info("Executing script command #" + (index + 1) + " of " + array.Length + "...");
 				SqlConnection conn = this.SqlConnection;
 
                 using (SqlCommand command = new SqlCommand(execText, conn)) {
@@ -36,11 +36,11 @@ namespace TidalCSharp {
 						command.ExecuteNonQuery();
 					} 
 					catch {
-						Console.WriteLine("Command Text: " + execText);
+						Shared.Info("Command Text: " + execText);
 						throw;
 					}
                 }
-				Console.WriteLine(" complete.");
+				Shared.Info(" complete.");
             }
 		}
 	}

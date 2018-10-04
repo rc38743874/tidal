@@ -30,7 +30,7 @@ namespace TidalCSharp {
 			//DataTable table = conn.GetSchema("UDF");
 			// DisplayData(table);
 
-			Console.WriteLine("Table count: " + tablesData.Rows.Count);
+			Shared.Info("Table count: " + tablesData.Rows.Count);
 			
 
 			foreach (System.Data.DataRow row in tablesData.Rows) {
@@ -52,7 +52,7 @@ namespace TidalCSharp {
 				};
 				tableDefList[tableName] = tableDef;
 
-				Console.WriteLine("Adding table " + tableName);
+				Shared.Info("Adding table " + tableName);
 
 			}
 
@@ -60,12 +60,12 @@ namespace TidalCSharp {
 			//DataTable table = conn.GetSchema("UDF");
 			// DisplayData(table);
 
-			Console.WriteLine("View count: " + viewsData.Rows.Count);
+			Shared.Info("View count: " + viewsData.Rows.Count);
 
 
 			/*
 	foreach (System.Data.DataColumn col in viewsData.Columns) {
-		Console.WriteLine(col.ColumnName);
+		Shared.Info(col.ColumnName);
 	}
 	*/
 			
@@ -89,7 +89,7 @@ namespace TidalCSharp {
 				};
 				tableDefList[tableName] = tableDef;
 
-				Console.WriteLine("Adding view " + tableName);
+				Shared.Info("Adding view " + tableName);
 
 			}
 
@@ -103,7 +103,7 @@ namespace TidalCSharp {
 				string columnName = (string)row["COLUMN_NAME"];
 				string tableName = (string)row["TABLE_NAME"];
 
-				Console.WriteLine("Adding column " + columnName + " from table " + tableName);
+				Shared.Info("Adding column " + columnName + " from table " + tableName);
 
 				
 				ulong? dataLength;
@@ -146,13 +146,13 @@ namespace TidalCSharp {
 
 			DataTable indexData = conn.GetSchema("Indexes", new string[] { null, null, null, null });
 
-			Console.WriteLine("Index count: " + indexData.Rows.Count);
+			Shared.Info("Index count: " + indexData.Rows.Count);
 			foreach (System.Data.DataRow row in indexData.Rows) {
 
 				string tableName = (string)row["TABLE_NAME"];
 				string indexName = (string)row["INDEX_NAME"];
 
-				Console.WriteLine("Adding index " + indexName + " from table " + tableName);
+				Shared.Info("Adding index " + indexName + " from table " + tableName);
 
 				TableDef table = tableDefList[tableName];
 
@@ -172,7 +172,7 @@ namespace TidalCSharp {
 				string indexName = (string)row["INDEX_NAME"];
 				string columnName = (string)row["COLUMN_NAME"];
 
-				Console.WriteLine("Adding index column " + columnName + " from index " + indexName + " on table " + tableName);
+				Shared.Info("Adding index column " + columnName + " from index " + indexName + " on table " + tableName);
 
 				// int ordinalPosition = (int)row["ORDINAL_POSITION"];
 				/* SORT_ORDER */

@@ -56,7 +56,7 @@ namespace TidalCSharp {
 						usedModelDefs.Add(subModelDef);
 						var outputPropertyDefChain = new List<PropertyDef>(incomingPropertyDefChain);
 						outputPropertyDefChain.Add(propertyDef);
-						// Console.WriteLine($"DEBUG:sqlName:{sqlName},referencedModelDef.ModelName={referencedModelDef.ModelName}, subModelDef.ModelName={subModelDef.ModelName}");
+						// Shared.Info($"DEBUG:sqlName:{sqlName},referencedModelDef.ModelName={referencedModelDef.ModelName}, subModelDef.ModelName={subModelDef.ModelName}");
 						if (subModelDef == referencedModelDef) {
 							var newPropertyDef = subModelDef.GetLikelyPropertyDef(sqlName);
 							if (newPropertyDef != null) {
@@ -65,8 +65,10 @@ namespace TidalCSharp {
 							}
 						}
 						else {
-							var bestResult = subModelDef.ScanForLikelyPropertyDef(outputPropertyDefChain, sqlName, referencedModelDef, modelDefList);
-							if (bestResult != null) return bestResult;
+							if (subModelDef != null) {
+								var bestResult = subModelDef.ScanForLikelyPropertyDef(outputPropertyDefChain, sqlName, referencedModelDef, modelDefList);
+								if (bestResult != null) return bestResult;
+							}
 						}
 					}
 				}

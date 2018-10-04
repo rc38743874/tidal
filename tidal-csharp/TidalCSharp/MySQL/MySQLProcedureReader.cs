@@ -43,7 +43,7 @@ namespace TidalCSharp {
 
 						if ((string)procRow["SQL_DATA_ACCESS"] == "CONTAINS SQL") {
 							/* TODO: I could envision a get server time function that doesn't read or write data but should be part of a DataAccess class. */
-							Console.WriteLine("Skipping procedure " + procedureName + " marked CONTAINS SQL, as this implies it does not read or write data.");
+							Shared.Info("Skipping procedure " + procedureName + " marked CONTAINS SQL, as this implies it does not read or write data.");
 						}
 						else {
 
@@ -195,7 +195,7 @@ namespace TidalCSharp {
 								if (tableDefMap[baseTableName].ColumnDefMap.ContainsKey(baseColumnName)) {
 									string newDataTypeCode = tableDefMap[baseTableName].ColumnDefMap[baseColumnName].ColumnType;
 									if (newDataTypeCode != dataTypeCode) {
-										Console.WriteLine("Warning:  GetTableSchema reported an incorrect data type of " + dataTypeCode + " from stored procedure " + procedureDef.ProcedureName + ", field " + fieldName + ", instead of the source table's column data type of " + newDataTypeCode + ".");
+										Shared.Warning(" GetTableSchema reported an incorrect data type of " + dataTypeCode + " from stored procedure " + procedureDef.ProcedureName + ", field " + fieldName + ", instead of the source table's column data type of " + newDataTypeCode + ".");
 										dataTypeCode = newDataTypeCode;
 									}
 								}

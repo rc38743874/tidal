@@ -55,7 +55,7 @@ namespace TidalCSharp {
 
 					//				var typeInfo = info.GetTypeInfo();
 
-					//				Console.WriteLine(typeInfo.Name);
+					//				Shared.Info(typeInfo.Name);
 
 				}
 
@@ -79,7 +79,7 @@ namespace TidalCSharp {
 			/* TODO: better to use IsClass or IsByRef ? */
 			bool isReference = type.IsClass || type.IsInterface;
 			if (memberName == "State") {
-				Console.WriteLine("State");
+				Shared.Info("State");
 			}
 			if (typeCode == "string") isReference = false;
 
