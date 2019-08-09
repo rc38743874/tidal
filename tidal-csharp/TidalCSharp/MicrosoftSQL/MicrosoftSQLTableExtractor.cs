@@ -17,31 +17,6 @@ namespace TidalCSharp {
 			this.SqlConnection = connection;
 		}
 
-		public void Test(SqlConnection conn) {
-			// catalog, owner, table, tabletype
-			//DataTable table = conn.GetSchema("MetaDataCollections");
-			DataTable table = conn.GetSchema("ForeignKeys");
-			int length = 25;
-			// foreach (DataColumn col in table.Columns) {
-//				Shared.Info("{0,-" + length + "}", col.ColumnName);
-//			}
-//			Shared.Info();
-
-			//foreach (DataRow row in table.Rows) {
-			//	foreach (DataColumn col in table.Columns) {
-			//		if (col.DataType.Equals(typeof(DateTime)))
-			//			Console.Write("{0,-" + length + ":d}", row[col]);
-			//		else if (col.DataType.Equals(typeof(Decimal)))
-			//			Console.Write("{0,-" + length + ":C}", row[col]);
-			//		else
-			//			Console.Write("{0,-" + length + "}", row[col]);
-			//	}
-			//	Shared.Info();
-			//}
-
-
-		}
-
 
 		public TableDefMap ExtractTableData(List<TableMapping> tableMappingList, bool cleanOracle) {
 
