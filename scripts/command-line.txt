@@ -40,14 +40,14 @@ TidalCSharp.exe\
  --modelsns=CreativeServices.Models\
  --modelsdll=/tmp/CreativeServicesModels.dll\
  --modulename=Reservation\
- --conn="server=localhost;user=SA;database=CREATIVE_SERVICES;password=18noi57_"\
+ --conn="server=localhost;user=SA;database=CREATIVE_SERVICES;password=_badpass1"\
  --sqlout=/tmp/Auditorium-tidal.sql\
  --namespace=AuditoriumScheduling\
  --tableout=/tmp/tables-tidal.json\
  --storedprocout=/tmp/stored-proc.json\
  --modelout=/tmp/models.json\
  --oracle\
- --namemapfile=/sav/Desktop/DIS-CS-tidal-mappings.json\
+ --namemapfile=/sav/Desktop/CS-tidal-mappings.json\
  --createproc\
  --out=/tmp/DataAccess.cs\
  mssql
