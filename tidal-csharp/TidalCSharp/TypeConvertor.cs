@@ -39,6 +39,7 @@ namespace TidalCSharp {
 				case "nchar":
 				case "sysname": /* TODO: not sure how sysname gets here, if string will work? */
 				case "xml":
+				case "varchar(max)":
 					return "string";
 				case "real":
 					return "single";
@@ -98,6 +99,7 @@ namespace TidalCSharp {
 
 		}
 
+
 		/* use more vernacular names such as long instead of System.Int64 e.g. */
 		public static string ConvertCLRToVernacular(string clrTypeCode) {
 			if (clrTypeCode.StartsWith("System.Nullable`1[", StringComparison.InvariantCulture)) {
@@ -105,7 +107,24 @@ namespace TidalCSharp {
 				string innerVernacularCode = ConvertCLRToVernacular(innerCLRCode);
 				return innerVernacularCode + "?";
 			}
+			if (clrTypeCode.EndsWith("[]")) {
+				return ConvertCLRToVernacular(clrTypeCode.Substring(0, clrTypeCode.Length - 2)) + "[]";
+			}
+			if (clrTypeCode.StartsWith("System.Collections.Generic.List`1[") && clrTypeCode.EndsWith("]")) {
+				var type = clrTypeCode.Substring(34, clrTypeCode.Length - 35);
+				var changedType = ConvertCLRToVernacular(type);
+				if (changedType == null) {
+					return "List<" + type + ">";
+				}
+				else {
+					return "List<" + changedType + ">";
+				}
+			}
 			switch (clrTypeCode) {
+				case "System.Byte":
+					return "byte";
+				case "System.Int16":
+					return "short";
 				case "System.Int32":
 					return "int";
 				case "System.Int64":
@@ -125,7 +144,7 @@ namespace TidalCSharp {
 				case "System.DateTime":
 					return "DateTime";
 				default:
-					Console.WriteLine("Warning: Unrecognized CLR type code passed to TypeConvertor: " + clrTypeCode);
+					// Shared.Warning("Unrecognized CLR type code passed to TypeConvertor: " + clrTypeCode);
 					return null;
 					// throw new ApplicationException("Unrecognized CLR type code passed to TypeConvertor: " + clrTypeCode);
 			}

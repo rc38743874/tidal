@@ -38,7 +38,7 @@ namespace TidalCSharp {
 					modelDef = modelDefMap[modelName];
 				}
 				else {
-					Console.WriteLine("Adding a virtual model after table named " + modelName + " from procedure " + procedureName + " which did not have a matching model in the models collection.");
+					Shared.Info("Adding a virtual model after table named " + modelName + " from procedure " + procedureName + " which did not have a matching model in the models collection.");
 					modelDef = new ModelDef {
 						ModelName = modelName,
 						FieldDefMap = new Dictionary<string, FieldDef>(),
@@ -121,11 +121,17 @@ namespace TidalCSharp {
 						if (propertyDef != null) {
 							argumentDef.PropertyDef = propertyDef;
 							parameterDef.PropertyDef = propertyDef;
-							// Console.WriteLine($"DEBUG: Found propertyDef of {propertyDef.PropertyName} for parameterName:{parameterDef.ParameterName} in function {functionName}.");
+							// Shared.Info($"DEBUG: Found propertyDef of {propertyDef.PropertyName} for parameterName:{parameterDef.ParameterName} in function {functionName}.");
+
+							/* TODO: seems like there should be a better way of storing isNullable at the property level */
+							/* we can't know from the models property type if strings are nullable or not so we just always assume they are */
+							if (propertyDef.PropertyTypeCode.EndsWith("?") == true || propertyDef.PropertyTypeCode == "string") {
+								argumentDef.IsNullable = true;
+								parameterDef.IsNullable = true;
+							}
 						}
 						else {
-							/* TODO: display only if warning level = x */
-							// Console.WriteLine($"Warning:  Could not find a propertyDef for parameterName:{parameterDef.ParameterName} in function {functionName} of {modelName}.");
+							Shared.Info($"Warning:  Could not find a propertyDef for parameterName:{parameterDef.ParameterName} in function {functionName} of {modelName}..");
 						}
 
 						functionDef.ArgumentDefList.Add(argumentDef);	
@@ -155,7 +161,7 @@ namespace TidalCSharp {
 
 							var referencedModelName = NameMapping.MakeCleanTableName(tableMappingList, fieldDef.BaseTableName, cleanOracle);
 
-							// Console.WriteLine($"DEBUG:convertedFieldName:{convertedFieldName}, fieldDef.BaseTableName={fieldDef.BaseTableName}, referencedModelName={referencedModelName}");
+							// Shared.Info($"DEBUG:convertedFieldName:{convertedFieldName}, fieldDef.BaseTableName={fieldDef.BaseTableName}, referencedModelName={referencedModelName}");
 							if (modelDefMap.ContainsKey(referencedModelName) == true) {
 							
 								var referencedModelDef = modelDefMap[referencedModelName];
@@ -163,9 +169,9 @@ namespace TidalCSharp {
 								var usedModelDefList = new List<ModelDef>() { modelDef };
 								propertyDefChain = modelDef.ScanForLikelyPropertyDef(new List<PropertyDef>(), convertedFieldName, referencedModelDef, modelDefMap.Values.ToList<ModelDef>(), usedModelDefList);
 								if (propertyDefChain != null) {
-									//Console.WriteLine($"DEBUG: Found propertydef chain! fieldName:{convertedFieldName} in procedure {procedureDef.ProcedureName}");
+									//Shared.Info($"DEBUG: Found propertydef chain! fieldName:{convertedFieldName} in procedure {procedureDef.ProcedureName}");
 									//propertyDefChain.ForEach(x => {
-									//	Console.WriteLine($"{x.PropertyTypeNamespace}.{x.PropertyTypeCode} {x.PropertyName}");
+									//	Shared.Info($"{x.PropertyTypeNamespace}.{x.PropertyTypeCode} {x.PropertyName}");
 									//});
 								}
 							}
@@ -181,7 +187,7 @@ namespace TidalCSharp {
 								PropertyName = CleanPropertyName(convertedFieldName),
 								PropertyTypeCode = fieldDef.DataTypeCode,
 								FieldDef = fieldDef});
-							Console.WriteLine($"Warning:  Could not find a propertyDef for fieldName \"{convertedFieldName}\" in procedure \"{procedureDef.ProcedureName}\".  " + 
+							Shared.Info($"Warning:  Could not find a propertyDef for fieldName \"{convertedFieldName}\" in procedure \"{procedureDef.ProcedureName}\".  " + 
 							                  $"The base table name for this field at the SQL level was \"{fieldDef.BaseTableName}\".  " + 
 							                  $"The converted model name was computed as \"{NameMapping.MakeCleanTableName(tableMappingList, fieldDef.BaseTableName, cleanOracle)}\".  " + 
 							                  $"This field will be included as a property in a result class labeled \"{functionDef.FunctionName}Result\" created just for the output of this function.");

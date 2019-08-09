@@ -15,10 +15,10 @@ namespace TidalCSharp {
 			foreach (var tableDef in tableDefList.OrderBy(x => x.TableName)) {
 				/* TODO: For now we skip views, but should we? */
 				if (tableDef.TableType == "TABLE") {
-					Console.Write("Making model from table " + tableDef.TableName);
+					Shared.Info("Making model from table " + tableDef.TableName);
 
 					var modelName = NameMapping.MakeCleanTableName(tableMappingList, tableDef.TableName, cleanOracle);
-					Console.WriteLine($" using model name {modelName}");
+					Shared.Info($"\t\tusing model name {modelName}");
 
 					StringBuilder buildText = new StringBuilder();
 

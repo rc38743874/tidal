@@ -22,22 +22,22 @@ namespace TidalCSharp {
 			//DataTable table = conn.GetSchema("MetaDataCollections");
 			DataTable table = conn.GetSchema("ForeignKeys");
 			int length = 25;
-			foreach (DataColumn col in table.Columns) {
-				Console.Write("{0,-" + length + "}", col.ColumnName);
-			}
-			Console.WriteLine();
+			// foreach (DataColumn col in table.Columns) {
+//				Shared.Info("{0,-" + length + "}", col.ColumnName);
+//			}
+//			Shared.Info();
 
-			foreach (DataRow row in table.Rows) {
-				foreach (DataColumn col in table.Columns) {
-					if (col.DataType.Equals(typeof(DateTime)))
-						Console.Write("{0,-" + length + ":d}", row[col]);
-					else if (col.DataType.Equals(typeof(Decimal)))
-						Console.Write("{0,-" + length + ":C}", row[col]);
-					else
-						Console.Write("{0,-" + length + "}", row[col]);
-				}
-				Console.WriteLine();
-			}
+			//foreach (DataRow row in table.Rows) {
+			//	foreach (DataColumn col in table.Columns) {
+			//		if (col.DataType.Equals(typeof(DateTime)))
+			//			Console.Write("{0,-" + length + ":d}", row[col]);
+			//		else if (col.DataType.Equals(typeof(Decimal)))
+			//			Console.Write("{0,-" + length + ":C}", row[col]);
+			//		else
+			//			Console.Write("{0,-" + length + "}", row[col]);
+			//	}
+			//	Shared.Info();
+			//}
 
 
 		}
@@ -46,14 +46,14 @@ namespace TidalCSharp {
 		public TableDefMap ExtractTableData(List<TableMapping> tableMappingList, bool cleanOracle) {
 
 			SqlConnection conn = this.SqlConnection;
-			Console.WriteLine("begin test");
+			Shared.Info("begin test");
 			Test(conn);
 
-			Console.WriteLine("Completed test");
+			Shared.Info("Completed test");
 
 			var tableDefMap = new TableDefMap();
 
-			Console.WriteLine("getting tables schema");
+			Shared.Info("getting tables schema");
 
 			/* 
              * Information Schema, GetSchema differences MSSQL from MySQL:
@@ -99,7 +99,7 @@ namespace TidalCSharp {
 				};
 				tableDefMap[schemaName + "." + tableName] = tableDef;
 
-				Console.WriteLine("Adding table " + tableName);
+				Shared.Info("Adding table " + tableName);
 
 			}
 
@@ -126,7 +126,7 @@ namespace TidalCSharp {
 				};
 				tableDefMap[schemaName + "." + tableName] = tableDef;
 
-				Console.WriteLine("Adding view " + tableName);
+				Shared.Info("Adding view " + tableName);
 
 			}
 
@@ -152,7 +152,7 @@ namespace TidalCSharp {
 				string tableName = (string)row["TABLE_NAME"];
 				string schemaName = (string)row["SCHEMA_NAME"];
 
-				Console.WriteLine("Adding column " + columnName + " from table " + tableName);
+				Shared.Info("Adding column " + columnName + " from table " + tableName);
 
 				short? dataLength;
 				if (row["CHARACTER_MAXIMUM_LENGTH"] == DBNull.Value) {
@@ -179,10 +179,10 @@ namespace TidalCSharp {
 					IsIdentity = (bool)row["IS_IDENTITY"],
 					IsNullable = (bool)row["IS_NULLABLE"]
 				};
-				Console.WriteLine(tableName);
+				Shared.Info(tableName);
 
 				tableDefMap[schemaName + "." + tableName].ColumnDefMap[columnName] = columnDef;
-				Console.WriteLine("Column " + columnName + " added.");
+				Shared.Info("Column " + columnName + " added.");
 			}
 
 
@@ -221,11 +221,11 @@ namespace TidalCSharp {
 				string indexName = (string)row["INDEX_NAME"];
 				string columnName = (string)row["COLUMN_NAME"];
 
-				Console.WriteLine("Adding index column " + columnName + " from index " + indexName + " on table " + tableName);
+				Shared.Info("Adding index column " + columnName + " from index " + indexName + " on table " + tableName);
 
 				// int ordinalPosition = (int)row["ORDINAL_POSITION"];
 				/* SORT_ORDER */
-				Console.WriteLine("looking for table " + tableName);
+				Shared.Info("looking for table " + tableName);
 				TableDef table = tableDefMap[schemaName + "." + tableName];
 
 				IndexDef indexDef = null;
@@ -276,7 +276,7 @@ namespace TidalCSharp {
 				columnDef.ReferencedTableDef = tableDefMap[row["REFERENCED_SCHEMA_NAME"].ToString() + "." + row["REFERENCED_TABLE_NAME"].ToString()];
 				columnDef.ReferencedColumnDef = columnDef.ReferencedTableDef.ColumnDefMap[row["REFERENCED_COLUMN_NAME"].ToString()];
 
-				Console.WriteLine("Adding foreign key for " + tableDef.TableName + "." + columnDef.ColumnName + " to " + columnDef.ReferencedTableDef.TableName + "." + columnDef.ReferencedColumnDef.ColumnName);
+				Shared.Info("Adding foreign key for " + tableDef.TableName + "." + columnDef.ColumnName + " to " + columnDef.ReferencedTableDef.TableName + "." + columnDef.ReferencedColumnDef.ColumnName);
 			}
 
 			return tableDefMap;

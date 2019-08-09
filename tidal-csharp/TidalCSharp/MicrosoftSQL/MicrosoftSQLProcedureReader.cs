@@ -46,7 +46,7 @@ namespace TidalCSharp {
 
 
 						string procedureName = (string)procRow["Name"];
-						Console.WriteLine("Reading procedure " + procedureName);
+						Shared.Info("Reading procedure " + procedureName);
 
 						/* we also have the ability to check referenced tables if need be */
 
@@ -54,7 +54,7 @@ namespace TidalCSharp {
 
 						string functionalName = procedureName.Substring(moduleName.Length + 1, secondUnderscoreIndex - moduleName.Length - 1);
 
-						Console.WriteLine($"moduleName:{moduleName}, functionalName:{functionalName}, secondUnderscoreIndex:{secondUnderscoreIndex}");
+						Shared.Info($"moduleName:{moduleName}, functionalName:{functionalName}, secondUnderscoreIndex:{secondUnderscoreIndex}");
 
 
 						/* that is the functional name, so we want to find by that */
@@ -71,7 +71,7 @@ namespace TidalCSharp {
 							FieldDefMap = new Dictionary<string, FieldDef>()
 						};
 
-						Console.WriteLine($"procedure {procedureName}, select:{(int)procRow["PerformsSelectCount"]}, update:{(int)procRow["PerformsUpdateCount"]} ");
+						Shared.Info($"procedure {procedureName}, select:{(int)procRow["PerformsSelectCount"]}, update:{(int)procRow["PerformsUpdateCount"]} ");
 
 						/* DELETE and UPDATE queries will have a value in PerformsSelectCount, so we screen by PerformsUpdateCount first */
 						if ((int)procRow["PerformsUpdateCount"] > 0) {
@@ -105,8 +105,8 @@ namespace TidalCSharp {
 
 
 				if (procedureDef.OutputsRows) {
-					// Console.WriteLine("Collecting output fields from procedure " + procedureDef.ProcedureName);
-					// Console.WriteLine(procedureDef.ToJSONString());
+					// Shared.Info("Collecting output fields from procedure " + procedureDef.ProcedureName);
+					// Shared.Info(procedureDef.ToJSONString());
 
 					/* MSSQL 2012 and beyond have result set function, which we'll use in this version */
 //					PopulateFields2008(procedureDef);
@@ -236,7 +236,7 @@ namespace TidalCSharp {
 						}
 
 						if (validNameList.Contains(fieldName) == false) {
-							// Console.WriteLine("Skipping superfluous field " + fieldName);
+							// Shared.Info("Skipping superfluous field " + fieldName);
 						}
 						else {
 							string sqlDataTypeCode = row["DataTypeCode"].ToString();
@@ -251,7 +251,7 @@ namespace TidalCSharp {
 							try {
 								dataTypeCode = TypeConvertor.ConvertSQLToCSharp(sqlDataTypeCode);
 							} catch {
-								Console.WriteLine("Call to ConvertSQLToCSharp for procedure " + procedureDef.ProcedureName + ", field named \"" + fieldName + "\", of SQL data type \"" + sqlDataTypeCode + "\".  This can happen if you have a stored procedure that is referencing a column that no longer exists for a table.  Check that the procedure will run on its own.");
+								Shared.Info("Call to ConvertSQLToCSharp for procedure " + procedureDef.ProcedureName + ", field named \"" + fieldName + "\", of SQL data type \"" + sqlDataTypeCode + "\".  This can happen if you have a stored procedure that is referencing a column that no longer exists for a table.  Check that the procedure will run on its own.");
 								throw;
 							}
 
@@ -263,7 +263,7 @@ namespace TidalCSharp {
 							 * as I could find */
 							string baseTableName = row["BaseTableName"].ToString();
 							string baseColumnName = row["BaseColumnName"].ToString();
-							// Console.WriteLine($"DEBUG:procedureName={procedureDef.ProcedureName}, fieldName={fieldName}, baseTableName={baseTableName}, baseColumnName={baseColumnName}");
+							// Shared.Info($"DEBUG:procedureName={procedureDef.ProcedureName}, fieldName={fieldName}, baseTableName={baseTableName}, baseColumnName={baseColumnName}");
 
 							FieldDef fieldDef = new FieldDef {
 								FieldName = fieldName,

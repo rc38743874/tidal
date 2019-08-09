@@ -38,7 +38,7 @@ namespace TidalCSharp {
             /* TODO: since this matches MySQL, move these and anything else to a base class once we know commonality */
 			foreach (string procName in procNameList) {
 				string cleanName = procName.Replace("'","''").Replace(";","");
-                Console.WriteLine("Dropping procedure " + cleanName);
+                Shared.Info("Dropping procedure " + cleanName);
 				using (SqlCommand command = new SqlCommand("DROP PROCEDURE " + cleanName, conn)) {
 					command.ExecuteNonQuery();
 				}

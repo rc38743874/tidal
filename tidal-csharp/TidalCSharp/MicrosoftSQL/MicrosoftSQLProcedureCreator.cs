@@ -377,7 +377,19 @@ namespace TidalCSharp {
 					scriptText.AppendLine(",");
 					scriptText.Append("\t\t");
 				}
-                scriptText.Append(CleanName(columnDef.ColumnName));
+				if (columnDef.ForceToBit == true) {
+					if (columnDef.IsNullable) {
+						scriptText.Append($"CASE WHEN {CleanName(columnDef.ColumnName)} IS NULL THEN CAST(NULL AS BIT) ELSE ");
+					}
+					scriptText.Append($"CASE {CleanName(columnDef.ColumnName)} WHEN 0 THEN CAST(0 AS BIT) ELSE CAST(1 AS BIT) END");
+					if (columnDef.IsNullable) {
+						scriptText.Append($" END");
+					}
+				}
+				else {
+					scriptText.Append(CleanName(columnDef.ColumnName));
+				}
+                
 				if (columnDef.ColumnName != columnDef.CleanName) {
 					scriptText.Append(" AS " + columnDef.CleanName);
 				}
@@ -482,11 +494,19 @@ namespace TidalCSharp {
 			List<ColumnDef> columnDefList = tableDef.ColumnDefMap.Values.ToList();
 
 			string storedProcName = moduleName + "_" + GetFunctionalName(tableDef) + "_ListFor";
+			bool first = true;
 			foreach (ColumnDef columnDef in indexColumnDefList) {
-				storedProcName += StripKeySuffix(columnDef.ColumnName);
+				if (first == true) {
+					first = false;
+				}
+				else { 
+					storedProcName += "_";
+				}
+				storedProcName += columnDef.CleanName;
+				// storedProcName += StripKeySuffix(columnDef.ColumnName);
 			}
 
-            OutputDIEProcedureText(scriptText, storedProcName);
+			OutputDIEProcedureText(scriptText, storedProcName);
 
 			
             OutputCreateProcedureText(scriptText, storedProcName);
@@ -507,7 +527,7 @@ namespace TidalCSharp {
 			OutputTidalSignature (scriptText);
 			scriptText.AppendLine("\tSET NOCOUNT ON");
 
-			scriptText.Append("SELECT ");
+			scriptText.Append("\tSELECT ");
 			/* bool */ firstItem = true;
 			foreach (ColumnDef columnDef in columnDefList) {
 				if (firstItem) {
@@ -515,6 +535,7 @@ namespace TidalCSharp {
 				}
 				else {
 					scriptText.AppendLine(",");
+					scriptText.Append("\t\t\t\t");
 				}
                 scriptText.Append(CleanName(columnDef.ColumnName));
 				if (columnDef.ColumnName != columnDef.CleanName) {
@@ -522,7 +543,7 @@ namespace TidalCSharp {
 				}
 			}
 			scriptText.AppendLine("");
-			scriptText.Append("FROM ");
+			scriptText.Append("\t\tFROM ");
 			if (tableDef.SchemaName != "dbo") scriptText.Append(tableDef.SchemaName + ".");
 			scriptText.Append(CleanName(tableName));
 
@@ -530,11 +551,11 @@ namespace TidalCSharp {
 			foreach (ColumnDef indexColumnDef in indexColumnDefList) {
 				scriptText.AppendLine("");
 				if (firstItem) {
-					scriptText.Append("WHERE ");
+					scriptText.Append("\t\tWHERE ");
 					firstItem = false;
 				}
 				else {
-					scriptText.Append("AND ");
+					scriptText.Append("\t\tAND ");
 				}
                 scriptText.Append(CleanName(indexColumnDef.ColumnName) + " = @" + indexColumnDef.CleanName);
 			}
