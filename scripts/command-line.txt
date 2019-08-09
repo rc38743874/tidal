@@ -1,0 +1,87 @@
+mcs *.cs /target:library -out:TestModels.dll
+
+
+mcs -debug -r:/opt/mysql-connector-6.4.5/v4/MySql.Data.dll -r:System.Data *.cs -out:tidal-csharp.exe
+
+mono --debug tidal-csharp.exe
+
+mcs -r:/tmp/models/TestModels.dll -r:/opt/mysql-connector-6.4.5/v4/MySql.Data.dll -r:System.Data DataAccess.cs /target:library -out:/tmp/TestDataAccess.dll
+
+
+
+
+sqlcmd -S 192.168.0.140 -U sa -i /tmp/create-tables.mssql.sql
+
+mono --debug TidalCSharp.exe -N=Test.Models -a=/tmp/models/TestModels.dll -u=Test -C="server=localhost;user=OpenUser;database=BigBasketball;port=3306;password=_badpass1" -q=/tmp/Test-tidal.sql -o=/tmp/DataAccess.cs -n=Test -t=/tmp/tables-tidal.json -b=/tmp/create-tables.mssql.sql -B=/tmp/drop-tables.mssql.sql mssql
+
+mono --debug TidalCSharp.exe -N=Test.Models -a=/tmp/models/TestModels.dll -u=Test -C="server=192.168.0.140;user=OpenUser;database=BigBasketball;password=_badpass1" -q=/tmp/Test-tidal.sql -o=/tmp/DataAccess.cs -n=Test -t=/tmp/tables-tidal.json -b=/tmp/create-tables.mssql.sql -B=/tmp/drop-tables.mssql.sql mssql
+
+ mono --debug TidalCSharp.exe -N=Test.Models -a=/tmp/models/TestModels.dll -u=Test -C="server=192.168.0.140;user=OpenUser;database=BigBasketball;password=_badpass1" -q=/tmp/Test-tidal.sql -o=/tmp/DataAccess.cs -n=Test -t=/tmp/tables-tidal.json -m=/tmp/models/ -s=/tmp/stored-proc.json mssql
+
+if I want to build the .cs files for models from a database before really coding anything:
+ mono --debug TidalCSharp.exe mssql -N=GMGame.Model -C="server=localhost;user=OpenUser;database=Basketball;password=_badpass1" -m=/sav/Dropbox/projects/gmgame/Model
+
+mono --debug TidalCSharp.exe -N=GMGame.Models -a=/tmp/models/TempModels.dll -u=GMGame -C="server=localhost;user=OpenUser;database=Basketball;password=_badpass1" -q=/tmp/Test-tidal.sql -o=/tmp/DataAccess.cs -n=Engine -t=/tmp/tables-tidal.json -s=/tmp/stored-proc.json mssql
+
+ mono --debug TidalCSharp.exe -N=GMGame.Models -a=/tmp/models/TempModels.dll -u=Engine -C="server=localhost;user=OpenUser;database=Basketball;password=_badpass1" -q=/tmp/Test-tidal.sql -o=/tmp/DataAccess.cs -n=GMGame -t=/tmp/tables-tidal.json -s=/tmp/stored-proc.json mssql
+
+mono --debug TidalCSharp.exe -N=GMGame.Model -a=/sav/Dropbox/projects/gmgame/Model/bin/Debug/Model.dll -u=Engine -C="server=localhost;user=OpenUser;database=Basketball;password=_badpass1" -q=/sav/Dropbox/projects/gmgame/sql/Engine-tidal.sql -o=/sav/Dropbox/projects/gmgame/EngineCore/DataAccess.cs -n=GMGame.EngineCore -t=/tmp/tables-tidal.json -s=/tmp/stored-proc.json mssql
+
+Make some models for Basketball:
+mono --debug TidalCSharp.exe -N=GMGame.Basketball -u=Engine -C="server=localhost;user=OpenUser;database=Basketball;password=_badpass1" -m=/tmp/bball mssql
+
+Build everything for Basketball:
+mono --debug TidalCSharp.exe -N=GMGame.Basketball -a=/sav/Dropbox/projects/gmgame/Basketball/bin/Release/Basketball.dll -a=/sav/Dropbox/projects/gmgame/Basketball/bin/Release/Core.dll -u=Engine -C="server=localhost;user=OpenUser;database=Basketball;password=_badpass1" -q=/sav/Dropbox/projects/gmgame/sql/Engine-tidal.sql -o=/sav/Dropbox/projects/gmgame/Engine/DataAccess.cs -n=GMGame.Engine -t=/tmp/tables-tidal.json -s=/tmp/stored-proc.json -d=/tmp/models.json -r -c mssql 
+
+
+// creative services, do not execute remove stored procedures, do not create DataAccess class
+mono --debug \
+TidalCSharp.exe\
+ --modelsns=CreativeServices.Models\
+ --modelsdll=/tmp/CreativeServicesModels.dll\
+ --modulename=Reservation\
+ --conn="server=localhost;user=SA;database=CREATIVE_SERVICES;password=18noi57_"\
+ --sqlout=/tmp/Auditorium-tidal.sql\
+ --namespace=AuditoriumScheduling\
+ --tableout=/tmp/tables-tidal.json\
+ --storedprocout=/tmp/stored-proc.json\
+ --modelout=/tmp/models.json\
+ --oracle\
+ --namemapfile=/sav/Desktop/DIS-CS-tidal-mappings.json\
+ --createproc\
+ --out=/tmp/DataAccess.cs\
+ mssql
+
+ --removeproc\
+--createproc \
+
+// create DataAccess, stored procs for Basketball, Web
+dotnet run -- --modelsns=GMGame.Basketball \
+--modelsdll=/sav/Dropbox/projects/gmgame/Basketball/bin/Debug/netstandard2.0/Core.dll,/sav/Dropbox/projects/gmgame/Basketball/bin/Debug/netstandard2.0/Basketball.dll \
+--modulename=Web \
+--conn="server=localhost;user=OpenUser;database=Basketball;password=_badpass1" \
+--sqlout=/sav/Dropbox/projects/gmgame/sql/Web-tidal.sql \
+--out=/sav/Dropbox/projects/gmgame/WebService/DataAccess.cs \
+--namespace=GMGame.Web \
+--tableout=/tmp/tables-tidal.json \
+--storedprocout=/tmp/stored-proc.json \
+--modelout=/tmp/models.json \
+--namemapfile=/sav/Dropbox/projects/gmgame/tidal/Basketball-tidal-mappings.json \
+--createproc \
+--removeproc \
+--ignore=LastNameImport,Player_SeasonPerf_View,BasketballCoachEvalSeed \
+--dblibrary=mssql
+
+// create DataAccess for Basketball, Engine
+dotnet run -- --modelsns=GMGame.Basketball \
+--modelsdll=/sav/Dropbox/projects/gmgame/Basketball/bin/Debug/netstandard2.0/Core.dll,/sav/Dropbox/projects/gmgame/Basketball/bin/Debug/netstandard2.0/Basketball.dll \
+--modulename=Engine \
+--conn="server=localhost;user=OpenUser;database=Basketball;password=_badpass1" \
+--sqlout=/tmp/Engine-tidal.sql \
+--out=/tmp/DataAccess-Tidal.cs \
+--namespace=GMGame.Engine \
+--tableout=/tmp/tables-tidal.json \
+--storedprocout=/tmp/stored-proc.json \
+--modelout=/tmp/models.json \
+--namemapfile=/sav/Dropbox/projects/gmgame/tidal/Basketball-tidal-mappings.json \
+--dblibrary=mssql

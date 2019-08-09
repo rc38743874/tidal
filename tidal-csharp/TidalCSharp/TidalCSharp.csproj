@@ -1,139 +1,18 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
   <PropertyGroup>
-    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
-    <Platform Condition=" '$(Platform)' == '' ">x86</Platform>
-    <ProjectGuid>{7A472536-DC9E-4A85-BFA7-D9BDAEB237B5}</ProjectGuid>
     <OutputType>Exe</OutputType>
-    <RootNamespace>TidalCSharp</RootNamespace>
-    <AssemblyName>TidalCSharp</AssemblyName>
-    <TargetFrameworkVersion>v4.7.1</TargetFrameworkVersion>
-    <TargetFrameworkProfile />
-    <ReleaseVersion>*</ReleaseVersion>
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|x86' ">
-    <DebugSymbols>true</DebugSymbols>
-    <DebugType>pdbonly</DebugType>
-    <Optimize>false</Optimize>
-    <OutputPath>..\..\bin\tidal-csharp\Debug\x86</OutputPath>
-    <DefineConstants>DEBUG;</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-    <Externalconsole>true</Externalconsole>
-    <PlatformTarget>x64</PlatformTarget>
-    <Commandlineparameters>-debug</Commandlineparameters>
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|x86' ">
-    <DebugType>full</DebugType>
-    <Optimize>true</Optimize>
-    <OutputPath>..\..\..\..\..\home\rob\projects\TidalCSharp\bin\Release\x86</OutputPath>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-    <Externalconsole>true</Externalconsole>
-    <PlatformTarget>x86</PlatformTarget>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'">
-    <DebugSymbols>true</DebugSymbols>
-    <OutputPath>..\..\bin\tidal-csharp\Debug\x64</OutputPath>
-    <DefineConstants>DEBUG;</DefineConstants>
-    <DebugType>pdbonly</DebugType>
-    <PlatformTarget>x64</PlatformTarget>
-    <ErrorReport>prompt</ErrorReport>
-    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
-    <Prefer32Bit>true</Prefer32Bit>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x64'">
-    <OutputPath>..\..\bin\tidal-csharp\Release\x64</OutputPath>
-    <Optimize>true</Optimize>
-    <DebugType>full</DebugType>
-    <PlatformTarget>x64</PlatformTarget>
-    <ErrorReport>prompt</ErrorReport>
-    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
-    <Prefer32Bit>true</Prefer32Bit>
-  </PropertyGroup>
+    <TargetFramework>netcoreapp2.1</TargetFramework>
+  </PropertyGroup>  
   <ItemGroup>
-    <Reference Include="System" />
-    <Reference Include="System.Data" />
-    <Reference Include="System.Xml" />
-    <Reference Include="System.Runtime.Serialization" />
-    <Reference Include="MySql.Data">
-      <HintPath>..\packages\MySql.Data.6.10.6\lib\net452\MySql.Data.dll</HintPath>
-    </Reference>
-    <Reference Include="Mono.Options">
-      <HintPath>..\packages\Mono.Options.5.3.0.1\lib\net4-client\Mono.Options.dll</HintPath>
-    </Reference>
-    <Reference Include="Newtonsoft.Json">
-      <HintPath>..\packages\Newtonsoft.Json.11.0.2\lib\net45\Newtonsoft.Json.dll</HintPath>
-    </Reference>
+    <PackageReference Include="CommandLineParser" Version="2.6.0" />
+    <PackageReference Include="MySql.Data" Version="8.0.17" />
+    <PackageReference Include="Newtonsoft.Json" Version="12.0.2" />
+    <PackageReference Include="System.Data.SqlClient" Version="4.6.1" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Program.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="FunctionCreator.cs" />
-    <Compile Include="ModelCreator.cs" />
-    <Compile Include="ModelReader.cs" />
-    <Compile Include="TypeConvertor.cs" />
-    <Compile Include="TidalOptions.cs" />
-    <Compile Include="Interfaces\IProcedureCreator.cs" />
-    <Compile Include="Interfaces\IProcedureReader.cs" />
-    <Compile Include="Interfaces\IProcedureRemover.cs" />
-    <Compile Include="Interfaces\IProcessor.cs" />
-    <Compile Include="MySQL\MySQLClassCreator.cs" />
-    <Compile Include="MySQL\MySQLProcedureCreator.cs" />
-    <Compile Include="MySQL\MySQLProcedureReader.cs" />
-    <Compile Include="MySQL\MySQLProcedureRemover.cs" />
-    <Compile Include="MySQL\MySQLProcessor.cs" />
-    <Compile Include="MySQL\MySQLScriptExecutor.cs" />
-    <Compile Include="MySQL\MySQLTableExtractor.cs" />
-    <Compile Include="Models\ArgumentDef.cs" />
-    <Compile Include="Models\ColumnDef.cs" />
-    <Compile Include="Models\FieldDef.cs" />
-    <Compile Include="Models\FunctionDef.cs" />
-    <Compile Include="Models\ModelDef.cs" />
-    <Compile Include="Models\ParameterDef.cs" />
-    <Compile Include="Models\ProcedureDef.cs" />
-    <Compile Include="Models\PropertyDef.cs" />
-    <Compile Include="Models\TableDef.cs" />
-    <Compile Include="Interfaces\ITableExtractor.cs" />
-    <Compile Include="Interfaces\IScriptExecutor.cs" />
-    <Compile Include="Models\ResultPropertyDef.cs" />
-    <Compile Include="MicrosoftSQL\MicrosoftSQLProcessor.cs" />
-    <Compile Include="MicrosoftSQL\MicrosoftSQLProcedureCreator.cs" />
-    <Compile Include="MicrosoftSQL\MicrosoftSQLClassCreator.cs" />
-    <Compile Include="MicrosoftSQL\MicrosoftSQLProcedureReader.cs" />
-    <Compile Include="MicrosoftSQL\MicrosoftSQLProcedureRemover.cs" />
-    <Compile Include="MicrosoftSQL\MicrosoftSQLScriptExecutor.cs" />
-    <Compile Include="MicrosoftSQL\MicrosoftSQLTableExtractor.cs" />
-    <Compile Include="Models\TableDefMap.cs" />
-    <Compile Include="Interfaces\ITableScriptWriter.cs" />
-    <Compile Include="MySQL\MySQLTableScriptWriter.cs" />
-    <Compile Include="MicrosoftSQL\MicrosoftSQLTableScriptWriter.cs" />
-    <Compile Include="Models\IndexDef.cs" />
-    <Compile Include="MicrosoftSQL\DataAccess.cs" />
-    <Compile Include="DatabaseTypeEnum.cs" />
-    <Compile Include="ModelWriter.cs" />
-    <Compile Include="ClassCreatorBase.cs" />
-    <Compile Include="DeOracle.cs" />
-    <Compile Include="Models\TableMapping.cs" />
-    <Compile Include="Models\ColumnMapping.cs" />
-    <Compile Include="MappingFileReader.cs" />
-    <Compile Include="NameMapping.cs" />
+    <PackageReference Include="Microsoft.DotNet.ILCompiler" Version="1.0.0-alpha-*" />
   </ItemGroup>
-  <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
-  <ItemGroup />
-  <ItemGroup>
-    <None Include="app.config" />
-    <None Include="docs\MySqlTransaction.xml" />
-    <None Include="docs\MySqlParameterCollection.xml" />
-    <None Include="docs\MySqlParameter.xml" />
-    <None Include="docs\MySqlHelper.xml" />
-    <None Include="docs\MySqlException.xml" />
-    <None Include="docs\MySqlDataReader.xml" />
-    <None Include="docs\MySqlDataAdapter.xml" />
-    <None Include="docs\MySqlConnectionStringBuilder.xml" />
-    <None Include="docs\MySqlConnection.xml" />
-    <None Include="docs\MySqlCommandBuilder.xml" />
-    <None Include="docs\MySqlCommand.xml" />
-    <None Include="packages.config" />
-  </ItemGroup>
+
+
 </Project>

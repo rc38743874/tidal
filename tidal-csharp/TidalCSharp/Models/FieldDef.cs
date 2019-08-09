@@ -40,5 +40,7 @@ namespace TidalCSharp {
 			sb.Append($"baseColumnName:\"{this.BaseColumnName}\"}}");
 			return sb.ToString();
 		}
+
+
 	}
 }

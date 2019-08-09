@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 
 namespace TidalCSharp {
 
@@ -25,6 +26,11 @@ namespace TidalCSharp {
 
 		/* for when it is an output */
 	//	public List<FieldDef> FieldDefList {get; set; }
+
+		public ModelDef GetModelDef(List<ModelDef> modelDefList) {
+			/* TODO: perhaps this should be set at creation time? */
+			return modelDefList.FirstOrDefault(def => def.Namespace==this.PropertyTypeNamespace && def.ModelName==this.PropertyTypeCode);
+		}
 
 	}
 

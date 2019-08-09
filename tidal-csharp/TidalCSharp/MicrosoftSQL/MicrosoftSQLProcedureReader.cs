@@ -231,6 +231,10 @@ namespace TidalCSharp {
 						IDataReader row = reader;
 
 						string fieldName = row["FieldName"].ToString();
+						if (fieldName == "") {
+							throw new Exception("MSSQL inspection for procedure " + procedureDef.ProcedureName + " returned a field with no name.  Check the stored procedure for invalid characters.");
+						}
+
 						if (validNameList.Contains(fieldName) == false) {
 							// Console.WriteLine("Skipping superfluous field " + fieldName);
 						}
@@ -247,7 +251,7 @@ namespace TidalCSharp {
 							try {
 								dataTypeCode = TypeConvertor.ConvertSQLToCSharp(sqlDataTypeCode);
 							} catch {
-								Console.WriteLine("last call to ConvertSQLToCSharp was for procedure " + procedureDef.ProcedureName + ", field named \"" + fieldName + "\".  This can happen if you have a stored procedure that is referencing a column that no longer exists for a table.  Check that the procedure will run on its own.");
+								Console.WriteLine("Call to ConvertSQLToCSharp for procedure " + procedureDef.ProcedureName + ", field named \"" + fieldName + "\", of SQL data type \"" + sqlDataTypeCode + "\".  This can happen if you have a stored procedure that is referencing a column that no longer exists for a table.  Check that the procedure will run on its own.");
 								throw;
 							}
 

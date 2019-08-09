@@ -1,115 +1,133 @@
 ﻿using System;
-using Mono.Options;
+using CommandLine;
 using System.Collections.Generic;
-
+ 
 namespace TidalCSharp {
 	public class TidalOptions {
 
-		private OptionSet optionSet;
 
 		public DatabaseTypeEnum DatabaseType { get; set; }
+
+        [Option('o', "out", Required = false, HelpText = "path/filename of the generated code DataAccess class")]
 		public string DataAccessFileNameOut { get; set; }
+		
+		[Option('t', "tableout", Required = false, HelpText = "path/filename to save table schema definitions")]
 		public string TableDefFileNameOut { get; set; }
+
+		[Option('T', "tablein", Required = false, HelpText = "path/filename to read table schema definitions")]
 		public string TableDefFileNameIn { get; set; }
+
+        [Option('b', "tablecreatescript", Required = false, HelpText = "path/filename to write out .sql table creation script")]
 		public string TableCreateScriptFileName { get; set; }
+	
+		[Option('B', "tabledropscript", Required = false, HelpText = "path/filename to write out .sql table drop script")]
 		public string TableDropScriptFileName { get; set; }
+
+		[Option('q', "sqlout", Required = false, HelpText = "path/filename to save optional copy of stored procedures")]
 		public string SQLScriptFileNameOut { get; set; }
+
+		[Option('Q', "sqlin", Required = false, HelpText = "path/filename from which to read stored procedure creation .sql script")]
 		public string SQLScriptFileNameIn { get; set; }
+
+		[Option('m', "makemodels", Required = false, HelpText = "generate and save fresh models into this path")]
 		public string ModelsPathOut { get; set; }
+
+		[Option('r', "removeproc", Required = false, HelpText = "remove existing Tidal stored procedures for this module in the database")]
 		public bool RemoveProcedures { get; set; }
+
+		[Option('c', "createproc", Required = false, HelpText = "automatically execute stored procedure script")]
 		public bool CreateProcedures { get; set; }
+				
+		[Option('s', "storedprocout", Required = false, HelpText = "path/filename to save stored procedure descriptions .json file")]
 		public string StoredProcDefFileNameOut { get; set; }
+
+		[Option('S', "storedprocin", Required = false, HelpText = "path/filename from which to read stored procedure descriptions")]
 		public string StoredProcDefFileNameIn { get; set; }
+
+		[Option('p', "prompt", Required = false, HelpText = "enter password via prompt")]
 		public bool PasswordPrompt { get; set; }
+		
+		[Option('P', "password", Required = false, HelpText = "password to connect to database")]
 		public string Password { get; set; }
+
+		[Option('D', "modelin", Required = false, HelpText = "path/filename from which to read model descriptions")]
 		public string ModelDefFileNameIn { get; set; }
+		
+		[Option('d', "modelout", Required = false, HelpText = "path/filename to save model descriptions .json file")]
 		public string ModelDefFileNameOut { get; set; }
+		
+	    [Option('C', "conn", Required = false, HelpText = "connection string to database")]
 		public string ConnectionString { get; set; }
 
+		[Option('M', "namemapfile", Required = false, HelpText = "path/filename containing mappings of names")]
 		public string TranslationFileName { get; set; }
+
+		[Option('w', "whitelist", Required = false, HelpText = "path/filename of whitelist allowing only some stored procedures")]
 		public string WhiteListFileName { get; set; }
+						
+		[Option('W', "genwhiteList", Required = false, HelpText = "path/filename of list containing all possibilities to use for a white list")]
 		public string GenerateWhiteListFileName { get; set; }
+
+		[Option('O', "oracle", Required = false, HelpText = "process tables and column names that have been targeted to Oracle")]
 		public bool CleanOracle { get; set; }
 
 		/* TODO: Remove ModelsNamespace if we really didn't use it */
+		[Option('N', "modelsns", Required = false, HelpText = "models namespace for generated and/or imported models")]
 		public string ModelsNamespace { get; set; }
 
-		public List<string> ModelsAssemblyFileNameList = new List<string> ();
-		public List<string> IgnoreTableNameList = new List<string>();
+		
+		[Option('a', "modelsdll", Required = false, HelpText = "path/filename of external assembly containing models")]
+		// public List<string> ModelsAssemblyFileNameList { get; set; }
+		public string ModelsAssemblyFileNameString { set => this.ModelsAssemblyFileNameList = new List<string>(value.Split(',')); }
+		public List<string> ModelsAssemblyFileNameList { get; set; }
+			
+		// i => this.IgnoreTableNameList.Add(i) 
+		[Option('i', "ignore", Required = false, HelpText = "ignore these tables (multiple -i allowed)")]
+		public string IgnoreTableNameString { set => this.IgnoreTableNameList.AddRange(value.Split(',')); }
+		public List<string> IgnoreTableNameList = new List<string>();		
+		
+		[Option('u', "modulename", Required = false, HelpText = "module name for tagging stored procedures")]
 		public string ModuleName { get; set; }
+		
+		[Option('n', "namespace", Required = false, HelpText = "project namespace for output DataAccess class")]
 		public string ProjectNamespace { get; set; }
+		
+		[Option('v', "verbose", Required = false, HelpText = "verbose messages")]
 		public bool Verbose { get; set; }
+		
+		[Option('h', "help", Required = false, HelpText = "show this message and exit")]
 		public bool ShouldShowHelp { get; set; }
+
+
+		[Option('l', "dblibrary", Required = false, HelpText = "database library (mssql or mysql)")]
+		public string DatabaseLibrary {get; set; }
 
 		public bool ShouldMakeTableDefMap { get; set; }
 		public bool ShouldMakeProcedureDefList { get; set; }
 
-		public TidalOptions ()
-		{
-			this.optionSet = new OptionSet {
-				{ "a|modelsdll=", "path/filename of external assembly containing models", a => this.ModelsAssemblyFileNameList.Add(a) },
-				{ "b|tablecreatescript=", "path/filename to write out .sql table creation script ", b => this.TableCreateScriptFileName = b },
-				{ "B|tabledropscript=", "path/filename to write out .sql table drop script ", B => this.TableDropScriptFileName = B },
-				{ "c|createproc", "automatically execute stored procedure script", c => this.CreateProcedures = (c != null)},
-				{ "C|conn=", "connection string to database", C => this.ConnectionString = C},
-				{ "d|modelout=", "path/filename to save model descriptions .json file", d => this.ModelDefFileNameOut = d},
-				{ "D|modelin=", "path/filename from which to read model descriptions", D => this.ModelDefFileNameIn = D},
-				{ "h|help", "show this message and exit", h => this.ShouldShowHelp = (h != null) },
-				{ "i|ignore=", "ignore these tables (multiple -i allowed)", i => this.IgnoreTableNameList.Add(i) },
-				{ "m|makemodels=", "generate and save fresh models into this path.", m => this.ModelsPathOut = m},
-				{ "M|namemapfile=", "path/filename containing mappings of names", M => this.TranslationFileName = M},
-				{ "n|namespace=", "project namespace for output DataAccess class", n => this.ProjectNamespace = n},
-				{ "N|modelsns=", "models namespace for generated and/or imported models", N => this.ModelsNamespace = N},
-				{ "o|out=", "path/filename of the generated code DataAccess class.", o => this.DataAccessFileNameOut = o},
-				{ "O|oracle", "process tables and column names that have been targeted to Oracle", O => this.CleanOracle = (O != null)},
-				{ "p|prompt", "enter password via prompt", p => this.PasswordPrompt = (p!=null) },
-				{ "P|password=", "password to connect to database", P => this.Password = P },
-				{ "q|sqlout=", "path/filename to save optional copy of stored procedures.", q => this.SQLScriptFileNameOut = q },
-				{ "Q|sqlin=", "path/filename from which to read stored procedure creation .sql script", Q => this.SQLScriptFileNameIn = Q},
-				{ "r|removeproc", "remove existing Tidal stored procedures for this module in the database", r => this.RemoveProcedures = (r != null)},
-				{ "s|storedprocout=", "path/filename to save stored procedure descriptions .json file", s => this.StoredProcDefFileNameOut = s},
-				{ "S|storedprocin=", "path/filename from which to read stored procedure descriptions", S => this.StoredProcDefFileNameIn = S},
-				{ "t|tableout=", "path/filename to save table schema definitions.", t => this.TableDefFileNameOut = t },
-				{ "T|tablein=", "path/filename to read table schema definitions.", T => this.TableDefFileNameIn = T },
-				{ "u|modulename=", "module name for tagging stored procedures", u => this.ModuleName = u},
-				{ "v|verbose", "verbose messages", v => this.Verbose = (v != null) },
-				{ "w|whitelist=", "path/filename of whitelist allowing only some stored procedures", w => this.WhiteListFileName = w },
-				{ "W|genwhiteList=", "path/filename of list containing all possibilities to use for a white list", w => this.GenerateWhiteListFileName = w },
-
-			};
-		}
 
 		/* returns true if successfully processed options */
 		public bool BuildFromArguments(string[] args) {
-			List<string> extraCommandList;
-			try {
-				extraCommandList = this.optionSet.Parse(args);
-
-			}
-			catch (OptionException e) {
-				Console.WriteLine(e.Message);
-				Console.WriteLine("Try 'tidal-csharp.exe --help' for more information.");
-				return false;
-			}
-
-
-
+			// Console.WriteLine("Try 'tidal-csharp.exe --help' for more information.");
+			
 			if (this.ShouldShowHelp == true) {
-				Console.WriteLine("Usage: tidal-csharp.exe database-type [OPTIONS]");
+				// Console.WriteLine("Usage: tidal-csharp.exe database-type [OPTIONS]");
+				Console.WriteLine("Usage: tidal-csharp.exe [OPTIONS]");
 				Console.WriteLine("Create a DataAccess.cs class in C#, and/or intermediate definition files.");
 				Console.WriteLine();
 
 
-				Console.WriteLine("database-type:");
-				Console.WriteLine("\tmssql: Microsoft SQL Server");
-				Console.WriteLine("\tmysql: MySQL");
+				// Console.WriteLine("database-type:");
+				// Console.WriteLine("\tmssql: Microsoft SQL Server");
+				// Console.WriteLine("\tmysql: MySQL");
 
 				// output the options
-				Console.WriteLine("Options:");
-				this.optionSet.WriteOptionDescriptions(Console.Out);
+				// Console.WriteLine("Options:");
+				/* TODO: write options */
+				// this.WriteOptionDescriptions(Console.Out);
 
-				Console.WriteLine("Examples:");
-				Console.WriteLine("tidal-csharp.exe mssql [OPTIONS]");
+				// Console.WriteLine("Examples:");
+				// Console.WriteLine("tidal-csharp.exe [OPTIONS]");
 				return false;
 			}
 
@@ -236,31 +254,24 @@ namespace TidalCSharp {
 			}
 
 
-			if (extraCommandList.Count == 0) {
+			if (DatabaseLibrary == null) {
 				Console.WriteLine("Database type argument (mssql or mysql) required but not found.");
 				Console.WriteLine("Try 'tidal-csharp.exe --help' for more information.");
 				return false;
 			}
-			else if (extraCommandList.Count == 1) {
-				string databaseTypeInput = extraCommandList[0].ToLowerInvariant();
+			else {
+				string databaseTypeInput = this.DatabaseLibrary.ToLowerInvariant();
 				DatabaseTypeEnum type;
 				if (Enum.TryParse<DatabaseTypeEnum>(databaseTypeInput, out type) == true) {
 					this.DatabaseType = type;
 				}
 				else {
-					Console.WriteLine($"Database type {extraCommandList[0]} not recognized.");
+					Console.WriteLine($"Database library type {this.DatabaseLibrary} not recognized.");
 					Console.WriteLine("Try 'tidal-csharp.exe --help' for more information.");
 					return false;
 				}
 			}
-			else {
-				Console.WriteLine("Unrecognized information: ");
-				foreach (string extraLine in extraCommandList) {
-					Console.WriteLine("\t" + extraLine);
-				}
-				Console.WriteLine("Try 'tidal-csharp.exe --help' for more information.");
-				return false;
-			}
+
 
 			if (this.StoredProcDefFileNameOut != null && this.StoredProcDefFileNameIn != null) {
 				wasOkay = false;

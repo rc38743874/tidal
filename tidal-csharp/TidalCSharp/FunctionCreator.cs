@@ -20,10 +20,15 @@ namespace TidalCSharp {
 			foreach (ProcedureDef procedureDef in procedureDefList) {
 				string procedureName = procedureDef.ProcedureName;
 				int firstUnderscoreIndex = procedureName.IndexOf('_');
-				int lastUnderscoreIndex = procedureName.LastIndexOf('_');
+				int secondUnderscoreIndex = procedureName.IndexOf('_', firstUnderscoreIndex + 1);
+				// int lastUnderscoreIndex = procedureName.LastIndexOf('_');
 
-				string modelName = procedureName.Substring(firstUnderscoreIndex + 1, lastUnderscoreIndex - firstUnderscoreIndex - 1);
-				string functionName = procedureName.Substring(lastUnderscoreIndex + 1);
+				// string modelName = procedureName.Substring(firstUnderscoreIndex + 1, lastUnderscoreIndex - firstUnderscoreIndex - 1);
+				// string functionName = procedureName.Substring(lastUnderscoreIndex + 1);
+				/* This assumes that no tables have underscores in their names */
+				/* TODO: probably need an table name underscore removal method elsewhere. */
+				string modelName = procedureName.Substring(firstUnderscoreIndex + 1, secondUnderscoreIndex - firstUnderscoreIndex - 1);				
+				string functionName = procedureName.Substring(secondUnderscoreIndex + 1);
 
 				/* skip tables we are ignoring */
 				if (ignoreTableNameList.Contains(modelName)) continue;
@@ -119,7 +124,8 @@ namespace TidalCSharp {
 							// Console.WriteLine($"DEBUG: Found propertyDef of {propertyDef.PropertyName} for parameterName:{parameterDef.ParameterName} in function {functionName}.");
 						}
 						else {
-							Console.WriteLine($"Warning:  Could not find a propertyDef for parameterName:{parameterDef.ParameterName} in function {functionName}.");
+							/* TODO: display only if warning level = x */
+							// Console.WriteLine($"Warning:  Could not find a propertyDef for parameterName:{parameterDef.ParameterName} in function {functionName} of {modelName}.");
 						}
 
 						functionDef.ArgumentDefList.Add(argumentDef);	
@@ -154,7 +160,8 @@ namespace TidalCSharp {
 							
 								var referencedModelDef = modelDefMap[referencedModelName];
 
-								propertyDefChain = modelDef.ScanForLikelyPropertyDef(new List<PropertyDef>(), convertedFieldName, referencedModelDef, modelDefMap.Values.ToList<ModelDef>());
+								var usedModelDefList = new List<ModelDef>() { modelDef };
+								propertyDefChain = modelDef.ScanForLikelyPropertyDef(new List<PropertyDef>(), convertedFieldName, referencedModelDef, modelDefMap.Values.ToList<ModelDef>(), usedModelDefList);
 								if (propertyDefChain != null) {
 									//Console.WriteLine($"DEBUG: Found propertydef chain! fieldName:{convertedFieldName} in procedure {procedureDef.ProcedureName}");
 									//propertyDefChain.ForEach(x => {

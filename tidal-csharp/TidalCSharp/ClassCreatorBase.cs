@@ -21,8 +21,6 @@ namespace TidalCSharp {
 			buildText.AppendLine("using System.Collections.Generic;");
 			buildText.AppendLine("using System.Data;");
 			buildText.AppendLine("using System.Linq;");
-			buildText.AppendLine("using System.Web;");
-
 
 			var namespaceTagMap = GetNamespaceTagMap(modelDefList);
 
@@ -144,7 +142,7 @@ namespace TidalCSharp {
             // List<Models.ClassificationLevel> ListForActiveFlag(SqlConnection conn, bool activeFlag);
 
 
-				classText.AppendLine($"\t\tprivate class {modelDef.ModelName} : I{modelDef.ModelName} {{");
+				classText.AppendLine($"\t\tpublic class {modelDef.ModelName} : I{modelDef.ModelName} {{");
 				classText.AppendLine("");
 
 				foreach (FunctionDef functionDef in modelDef.FunctionDefList) {
@@ -172,11 +170,11 @@ namespace TidalCSharp {
 
 				foreach (FunctionDef functionDef in modelDef.FunctionDefList) {
 					if (functionDef.OutputsList == true) {
-						CreateFunctionMultiRow(classText, internalInterfaceText, modelDef, functionDef, namespaceTagMap);
+						CreateFunctionMultiRow(classText, internalInterfaceText, modelDef, modelDefList, functionDef, namespaceTagMap);
 					}
 					else if (functionDef.OutputsObject == true) {
 						/* TODO: if it's only a single field output, should it return just that as a return value? */
-						CreateFunctionSingleRow(classText, internalInterfaceText, modelDef, functionDef, namespaceTagMap);
+						CreateFunctionSingleRow(classText, internalInterfaceText, modelDef, modelDefList, functionDef, namespaceTagMap);
 					}
 					else {
 						CreateFunctionNoRows(classText, internalInterfaceText, modelDef, functionDef, namespaceTagMap);
@@ -186,11 +184,11 @@ namespace TidalCSharp {
 
 				if (modelDef.IsJustTable == false) {
 					if (modelDef.UsesBuildListFunction == true) {
-						AddBuildList(classText, modelDef, namespaceTagMap);
+						AddBuildList(classText, modelDef, modelDefList, namespaceTagMap);
 					}
 
 					if (modelDef.UsesMakeObjectFunction == true) {
-						AddMakeObject(classText, modelDef, namespaceTagMap);
+						AddMakeObject(classText, modelDef, modelDefList, namespaceTagMap);
 					}
 				}
 
@@ -236,7 +234,7 @@ namespace TidalCSharp {
 		public void CreateFunctionNoRows(StringBuilder buildText, StringBuilder internalInterfaceText, ModelDef modelDef, FunctionDef functionDef, Dictionary<string, string> namespaceTagMap) {
 			/* version using all arguments */
 
-			string functionString = GetFunctionSignature(functionDef, namespaceTagMap);
+			string functionString = GetFunctionSignature(modelDef.ModelName, functionDef, namespaceTagMap);
 			string argumentsString = GetArguments(functionDef);
 			string functionSignature = functionString + argumentsString + ")";
 
@@ -264,7 +262,7 @@ namespace TidalCSharp {
 			if (functionDef.ArgumentDefList.Any(x => x.PropertyDef != null)) {
 
 				string functionSignatureWithObject = functionString + GetObjectArgument(modelDef, namespaceTagMap)
-					    + GetArgumentsNotInObject(functionDef);
+					    + GetArgumentsNotInObject(functionDef) + ")";
 
 				internalInterfaceText.AppendLine("\t\t\t" + functionSignatureWithObject + ";");
 				internalInterfaceText.AppendLine();
@@ -274,7 +272,7 @@ namespace TidalCSharp {
 				if (functionDef.ReturnTypeCode != null) {
 					buildText.Append("return ");
 				}
-				buildText.AppendLine(modelDef.ModelName + "." + functionDef.FunctionName + "(conn, trans,");
+				buildText.AppendLine("this." + functionDef.FunctionName + "(conn, trans,");
 				AddFunctionArguments(buildText, modelDef, functionDef);
 
 				buildText.AppendLine("\t\t\t}");
@@ -288,11 +286,17 @@ namespace TidalCSharp {
 					
 
 
-		public void CreateFunctionMultiRow(StringBuilder buildText, StringBuilder internalInterfaceText, ModelDef modelDef, FunctionDef functionDef, Dictionary<string, string> namespaceTagMap) {
+		public void CreateFunctionMultiRow(StringBuilder buildText,
+					StringBuilder internalInterfaceText,
+					ModelDef modelDef,
+					List<ModelDef> modelDefList,
+					FunctionDef functionDef,
+					Dictionary<string, string> namespaceTagMap) {
 
-			string functionString = GetFunctionSignature(functionDef, namespaceTagMap);
+			string functionString = GetFunctionSignature(modelDef.ModelName, functionDef, namespaceTagMap);
+			string newObjectString = GetNewObjectFunctionArguments(namespaceTagMap, modelDef, modelDefList);
 			string argumentsString = GetArguments(functionDef);
-			string functionSignature = functionString + argumentsString + ")";
+			string functionSignature = functionString + newObjectString + argumentsString + ")";
 
 			internalInterfaceText.AppendLine("\t\t\t" + functionSignature + ";");
 			internalInterfaceText.AppendLine();
@@ -305,14 +309,16 @@ namespace TidalCSharp {
 				buildText.AppendLine("\t\t\t\t\tvar list = new List<" + functionDef.FunctionName + "Result>();");
 				buildText.AppendLine("\t\t\t\t\tusing (var reader = command.ExecuteReader()) {");
 				buildText.AppendLine("\t\t\t\t\t\twhile (reader.Read()) {");
-				AddExtraResultFill(buildText, modelDef, functionDef);
+				AddExtraResultFill(buildText, modelDef, modelDefList, functionDef, namespaceTagMap);
 				buildText.AppendLine("\t\t\t\t\t\t\tlist.Add(item);");
 				buildText.AppendLine("\t\t\t\t\t\t}");
 				buildText.AppendLine("\t\t\t\t\t}");
 				buildText.AppendLine("\t\t\t\t\treturn list;");
 			}
 			else {
-				buildText.AppendLine("\t\t\t\t\treturn BuildList(command);");
+				buildText.Append("\t\t\t\t\treturn BuildList(command");
+				AddMakeObjectCallFunctionArguments(buildText, namespaceTagMap, modelDef, modelDefList);
+				buildText.AppendLine(");");
 			}
 			buildText.AppendLine("\t\t\t\t}");
 			buildText.AppendLine("\t\t\t}");
@@ -320,11 +326,17 @@ namespace TidalCSharp {
 		}
 
 
-		public void CreateFunctionSingleRow(StringBuilder buildText, StringBuilder internalInterfaceText, ModelDef modelDef, FunctionDef functionDef, Dictionary<string, string> namespaceTagMap) {
+		public void CreateFunctionSingleRow(StringBuilder buildText,
+					StringBuilder internalInterfaceText,
+					ModelDef modelDef,
+					List<ModelDef> modelDefList,
+					FunctionDef functionDef,
+					Dictionary<string, string> namespaceTagMap) {
 
-			string functionString = GetFunctionSignature(functionDef, namespaceTagMap);
+			string functionString = GetFunctionSignature(modelDef.ModelName, functionDef, namespaceTagMap);
+			string newObjectString = GetNewObjectFunctionArguments(namespaceTagMap, modelDef, modelDefList);
 			string argumentsString = GetArguments(functionDef);
-			string functionSignature = functionString + argumentsString + ")";
+			string functionSignature = functionString + newObjectString + argumentsString + ")";
 			internalInterfaceText.AppendLine("\t\t\t" + functionSignature + ";");
 			internalInterfaceText.AppendLine();
 
@@ -335,10 +347,12 @@ namespace TidalCSharp {
 			buildText.AppendLine("\t\t\t\t\t\tif (reader.Read()) {");
 
 			if (functionDef.UsesResult) {
-				AddExtraResultFill(buildText, modelDef, functionDef);
+				AddExtraResultFill(buildText, modelDef, modelDefList, functionDef, namespaceTagMap);
 				buildText.AppendLine("\t\t\t\t\t\t\treturn item;");
 			} else {
-				buildText.AppendLine("\t\t\t\t\t\t\treturn MakeObject(reader, null);");
+				buildText.Append("\t\t\t\t\t\t\treturn MakeObject(reader");
+				AddMakeObjectCallFunctionArguments(buildText, namespaceTagMap, modelDef, modelDefList);
+				buildText.AppendLine(", null);");
 			}
 			buildText.AppendLine("\t\t\t\t\t\t} else {");
 			buildText.AppendLine("\t\t\t\t\t\t\treturn null;");
@@ -354,23 +368,25 @@ namespace TidalCSharp {
 //				string functionSignatureWithObject = functionString + GetObjectArgument(modelDef, namespaceTagMap)
 //					    + GetArgumentsNotInObject(functionDef);
 
-				string functionSignatureWithObject = functionString + GetObjectArgument(modelDef, namespaceTagMap) + ")";
+				string functionSignatureWithObject = functionString + newObjectString + GetObjectArgument(modelDef, namespaceTagMap) + ")";
 
 				internalInterfaceText.AppendLine("\t\t\t" + functionSignatureWithObject + ";");
 				internalInterfaceText.AppendLine();
 
 				buildText.Append("\t\t\tpublic " + functionSignatureWithObject + " {");
-				buildText.AppendLine("\t\t\t\treturn " + modelDef.ModelName + "." + functionDef.FunctionName + "(conn, trans,");
+				buildText.AppendLine("\t\t\t\treturn this." + functionDef.FunctionName + "(conn, trans");
+				AddMakeObjectCallFunctionArguments(buildText, namespaceTagMap, modelDef, modelDefList);
+				buildText.AppendLine(",");
 				AddFunctionArguments(buildText, modelDef, functionDef);
 				buildText.AppendLine("\t\t\t}");
 			}
 		}
 
 
-		public string GetFunctionSignature(FunctionDef functionDef, Dictionary<string, string> namespaceTagMap) {
+		public string GetFunctionSignature(string modelName, FunctionDef functionDef, Dictionary<string, string> namespaceTagMap) {
 			string code = "";
 			if (functionDef.UsesResult) {
-				code = functionDef.FunctionName + "Result";
+				code = modelName + "." + functionDef.FunctionName + "Result";
 			} else {
 				if (functionDef.ReturnTypeCode != null) {
 					if (functionDef.ReturnTypeNamespace != null) code = namespaceTagMap[functionDef.ReturnTypeNamespace] + ".";
@@ -398,7 +414,6 @@ namespace TidalCSharp {
 			buildText.AppendLine(",");
 			buildText.Append("\t\t\t\t\t\t");
 			buildText.AppendLine(namespaceTagMap[modelDef.Namespace] + "." + modelDef.ModelName + " inputObject");
-			buildText.AppendLine();
 			return buildText.ToString();
 		}
 
@@ -484,12 +499,19 @@ namespace TidalCSharp {
 		// command.Parameters.Add(new SqlParameter("@OfficialPositionCode", officialPositionCode ?? DBNull.Value));
 					
 
-		public void AddBuildList(StringBuilder buildText, ModelDef modelDef, Dictionary<string, string> namespaceTagMap) {
-			buildText.AppendLine("\t\t\tprivate List<" + namespaceTagMap[modelDef.Namespace] + "." + modelDef.ModelName + "> BuildList(" + this.GetSqlCommandText() + " command) {");
+		public void AddBuildList(StringBuilder buildText,
+					ModelDef modelDef,
+					List<ModelDef> modelDefList,
+					Dictionary<string, string> namespaceTagMap) {
+			buildText.Append("\t\t\tprivate List<" + namespaceTagMap[modelDef.Namespace] + "." + modelDef.ModelName + "> BuildList(" + this.GetSqlCommandText() + " command");
+			buildText.Append(GetNewObjectFunctionArguments(namespaceTagMap, modelDef, modelDefList));
+			buildText.AppendLine(") {");
 			buildText.AppendLine("\t\t\t\tvar list = new List<" + namespaceTagMap[modelDef.Namespace] + "." + modelDef.ModelName + ">();");
 			buildText.AppendLine("\t\t\t\tusing (var reader = command.ExecuteReader()) {");
 			buildText.AppendLine("\t\t\t\t\twhile (reader.Read()) {");
-			buildText.AppendLine("\t\t\t\t\t\tvar item = MakeObject(reader, null);");
+			buildText.Append("\t\t\t\t\t\tvar item = MakeObject(reader");
+			AddMakeObjectCallFunctionArguments(buildText, namespaceTagMap, modelDef, modelDefList);
+			buildText.AppendLine(", null);");
 			buildText.AppendLine("\t\t\t\t\t\tlist.Add(item);");
 			buildText.AppendLine("\t\t\t\t\t}");
 			buildText.AppendLine("\t\t\t\t}");
@@ -499,27 +521,42 @@ namespace TidalCSharp {
 
 		}
 
-		public void AddMakeObject(StringBuilder buildText, ModelDef modelDef, Dictionary<string, string> namespaceTagMap) {
+		public void AddMakeObject(StringBuilder buildText, ModelDef modelDef, List<ModelDef> modelDefList, Dictionary<string, string> namespaceTagMap) {
 			var classText = namespaceTagMap[modelDef.Namespace] + "." + modelDef.ModelName;
-			buildText.AppendLine("\t\t\tprivate " + classText + " MakeObject(IDataRecord row, "
-					+ classText + " targetToFill) {");
+			buildText.AppendLine($"\t\t\tprivate {classText} MakeObject(IDataRecord row");
+			
+			string newObjectString = GetNewObjectFunctionArguments(namespaceTagMap, modelDef, modelDefList);
+			buildText.AppendLine(newObjectString);
+			buildText.AppendLine(",");
+			buildText.AppendLine($"\t\t\t\t\t\t{classText} targetToFill) {{");
 			buildText.AppendLine("\t\t\t\t" + classText + " outputObject = null;");
 			buildText.AppendLine("\t\t\t\tif (targetToFill != null) {");
 			buildText.AppendLine("\t\t\t\t\toutputObject = targetToFill;");
 			buildText.AppendLine("\t\t\t\t}");
 			buildText.AppendLine("\t\t\t\telse {");
-			buildText.AppendLine("\t\t\t\t\toutputObject = new " + classText + "();");
+			buildText.Append("\t\t\t\t\toutputObject = ");
+			if (modelDef.IsAbstract) {
+				buildText.AppendLine($"createNew{modelDef.ModelName}ObjectFunction();");
+			}
+			else {
+				buildText.AppendLine("new " + classText + "();");
+			}
 			buildText.AppendLine("\t\t\t\t}");
 			buildText.AppendLine("");
 			buildText.AppendLine("\t\t\t\tfor (var i = 0; i < row.FieldCount; i++) {");
-			buildText.AppendLine("\t\t\t\t\tFillField(outputObject, row.GetName(i), row.GetValue(i));");
+			buildText.Append("\t\t\t\t\tFillField(outputObject, row.GetName(i), row.GetValue(i)");
+			AddMakeObjectCallFunctionArguments(buildText, namespaceTagMap, modelDef, modelDefList);
+						
+			buildText.AppendLine(");");
 			buildText.AppendLine("\t\t\t\t}");
 			buildText.AppendLine("");
 			buildText.AppendLine("\t\t\t\treturn outputObject;");
 			buildText.AppendLine("\t\t\t}");
 			buildText.AppendLine();
 
-			buildText.AppendLine("\t\t\tprivate void FillField(" + classText + " outputObject, string columnName, object value) {");
+			buildText.Append("\t\t\tprivate void FillField(" + classText + " outputObject, string columnName, object value");
+			buildText.Append(GetNewObjectFunctionArguments(namespaceTagMap, modelDef, modelDefList));
+			buildText.AppendLine(") {");
 			buildText.AppendLine("\t\t\t\tswitch (columnName) {");
 
 			foreach (FieldDef fieldDef in modelDef.FieldDefMap.Values.OrderBy(x => x.FieldName)) {
@@ -560,6 +597,7 @@ namespace TidalCSharp {
 						buildText.AppendLine("\t\t\t\t\t\tif (outputObject." + propertyDef.PropertyName + " == null) {");
 
 						//					Console.WriteLine($"DEBUG:fieldDef.FieldName={fieldDef.FieldName}, modelDef.ModelName={modelDef.ModelName}, propertyDef.PropertyName={propertyDef.PropertyName}, propertyDef.PropertyTypeNamespace={propertyDef.PropertyTypeNamespace}, fieldDef.BaseTableName={fieldDef.BaseTableName}");
+
 						buildText.AppendLine("\t\t\t\t\t\t\toutputObject." + propertyDef.PropertyName + " = new " + namespaceTagMap[propertyDef.PropertyTypeNamespace] + "." + fieldDef.BaseTableName + "();");
 						buildText.AppendLine("\t\t\t\t\t\t}");
 						buildText.AppendLine("\t\t\t\t\t\tDataAccess." + fieldDef.BaseTableName + ".FillField(outputObject." + propertyDef.PropertyName + ", \"" + fieldDef.FieldName + "\", value);");
@@ -575,9 +613,12 @@ namespace TidalCSharp {
 								buildText.AppendLine("\t\t\t\t\t\t}");
 								buildText.AppendLine("\t\t\t\t\t\telse {");
 								buildText.AppendLine("\t\t\t\t\t\t\tif (outputObject." + propertyDef.PropertyName + " == null) {");
-								buildText.AppendLine("\t\t\t\t\t\t\t\toutputObject." + propertyDef.PropertyName + " = new " + namespaceTagMap[propertyDef.PropertyTypeNamespace] + "." + propertyDef.PropertyTypeCode + "();");
+
+								buildText.Append("\t\t\t\t\t\t\t\toutputObject." + propertyDef.PropertyName + " = ");
+								AddNewObjectFromPropertyDef(buildText, propertyDef, modelDefList, namespaceTagMap);
+								
 								buildText.AppendLine("\t\t\t\t\t\t\t}");
-								buildText.AppendLine("\t\t\t\t\t\t\toutputObject." + propertyDef.PropertyName + "." + propertyDef.PropertyTypeCode + "ID = (" + fieldDef.DataTypeCode + ")value ;");
+								buildText.AppendLine("\t\t\t\t\t\t\toutputObject." + propertyDef.PropertyName + "." + propertyDef.PropertyTypeCode + "ID = (" + fieldDef.DataTypeCode + ")value;");
 								buildText.AppendLine("\t\t\t\t\t\t}");
 							} else {
 								buildText.Append("\t\t\t\t\t\toutputObject." + propertyDef.PropertyName + " = ");
@@ -594,6 +635,68 @@ namespace TidalCSharp {
 			buildText.AppendLine("\t\t\t}");
 		}
 
+		public void AddNewObjectFromPropertyDef(StringBuilder buildText,
+					PropertyDef propertyDef,
+					List<ModelDef> modelDefList,
+					Dictionary<string, string> namespaceTagMap) {
+			var propertyModel = propertyDef.GetModelDef(modelDefList);
+								
+			if (propertyModel != null && propertyModel.IsAbstract) {
+				buildText.AppendLine($"createNew{propertyModel.ModelName}ObjectFunction();");
+			}
+			else {
+				buildText.AppendLine($"new {namespaceTagMap[propertyDef.PropertyTypeNamespace]}.{propertyDef.PropertyTypeCode}();");
+			}
+		}
+
+		public void AddMakeObjectCallFunctionArguments(StringBuilder buildText,
+					Dictionary<string, string> namespaceTagMap, 
+					ModelDef baseModelDef, 
+					List<ModelDef> modelDefList) {
+			if (baseModelDef.IsAbstract) {
+				buildText.AppendLine(",");
+				buildText.Append($"createNew{baseModelDef.ModelName}ObjectFunction");
+			}
+			baseModelDef.FieldDefMap.Values
+						.Where(x=>x.PropertyDef!=null)
+						.Select(x => {
+							var def = x.PropertyDef.GetModelDef(modelDefList);
+							return def;
+						})
+						.Where(x => x!=null && x.IsAbstract==true && x != baseModelDef)
+						.Distinct()
+						.OrderBy(x => x.ModelName)
+						.ToList()
+						.ForEach(x => {
+							buildText.AppendLine(",");
+							buildText.Append($"createNew{x.ModelName}ObjectFunction");
+						});
+		}
+
+		public string GetNewObjectFunctionArguments(Dictionary<string, string> namespaceTagMap, 
+					ModelDef baseModelDef, 
+					List<ModelDef> modelDefList) {
+			var buildText = new StringBuilder();
+			if (baseModelDef.IsAbstract) {
+				buildText.AppendLine(",");
+				buildText.Append($"\t\t\t\t\t\tFunc<{namespaceTagMap[baseModelDef.Namespace]}.{baseModelDef.ModelName}> createNew{baseModelDef.ModelName}ObjectFunction");
+			}
+			baseModelDef.FieldDefMap.Values
+						.Where(x=>x.PropertyDef!=null)
+						.Select(x => new {ModelDef=x.PropertyDef.GetModelDef(modelDefList),
+								IsInterface=x.PropertyDef.IsInterface})
+						.Where(x => x.ModelDef!=null && x.ModelDef.IsAbstract==true && x.ModelDef != baseModelDef)
+						.Distinct()
+						.OrderBy(x => x.ModelDef.ModelName)
+						.ToList()
+						.ForEach(x => {
+							buildText.AppendLine(",");
+							buildText.Append($"\t\t\t\t\t\tFunc<{namespaceTagMap[x.ModelDef.Namespace]}.");
+							if (x.IsInterface) buildText.Append("I");
+							buildText.Append($"{x.ModelDef.ModelName}> createNew{x.ModelDef.ModelName}ObjectFunction");
+						});
+			return buildText.ToString();
+		}
 		public void AddFillFieldColumnSet(StringBuilder buildText, FieldDef fieldDef, PropertyDef propertyDef, Dictionary<string, string> namespaceTagMap) {
 			if (propertyDef.IsEnum == true) {
 				string enumType = namespaceTagMap[propertyDef.PropertyTypeNamespace] + "." + propertyDef.PropertyTypeCode;
@@ -614,11 +717,14 @@ namespace TidalCSharp {
 		}
 
 
-		public void AddExtraResultFill(StringBuilder buildText, ModelDef modelDef, FunctionDef functionDef) {
+		public void AddExtraResultFill(StringBuilder buildText, ModelDef modelDef, List<ModelDef> modelDefList, FunctionDef functionDef, Dictionary<string, string> namespaceTagMap) {
 			buildText.AppendLine("\t\t\t\t\t\t\tvar item = new " + functionDef.FunctionName + "Result {");
 			bool first = true;
 			if (modelDef.IsJustTable == false) {
-				buildText.Append("\t\t\t\t\t\t\t\t\t" + modelDef.ModelName + " = MakeObject(reader, null)");
+				buildText.Append("\t\t\t\t\t\t\t\t\t" + modelDef.ModelName + " = MakeObject(reader");
+				AddMakeObjectCallFunctionArguments(buildText, namespaceTagMap, modelDef, modelDefList);
+
+				buildText.Append(", null)");
 				first = false;
 			}
 			foreach (var resultPropertyDef in functionDef.ResultPropertyDefList) {
