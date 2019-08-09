@@ -269,7 +269,7 @@ namespace TidalCSharp {
 			
 				buildText.AppendLine("\t\t\tpublic " + functionSignatureWithObject + " {");
 				buildText.Append("\t\t\t\t");
-				buildText.AppendLine($"var actionObject = new {modelDef.ModelName}();");
+				// buildText.AppendLine($"var actionObject = new {modelDef.ModelName}();");
 				buildText.Append("\t\t\t\t");
 				if (functionDef.ReturnTypeCode != null) {
 					buildText.Append("return ");
