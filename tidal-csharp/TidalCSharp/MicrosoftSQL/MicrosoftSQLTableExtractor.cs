@@ -21,10 +21,9 @@ namespace TidalCSharp {
 		public TableDefMap ExtractTableData(List<TableMapping> tableMappingList, bool cleanOracle) {
 
 			SqlConnection conn = this.SqlConnection;
-			Shared.Info("begin test");
-			Test(conn);
-
-			Shared.Info("Completed test");
+			// Shared.Info("begin test");
+			// Test(conn);
+			// Shared.Info("Completed test");
 
 			var tableDefMap = new TableDefMap();
 
