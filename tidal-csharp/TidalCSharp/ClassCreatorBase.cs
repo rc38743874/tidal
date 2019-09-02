@@ -500,7 +500,8 @@ namespace TidalCSharp {
 					buildText.Append("\t\t\t\t\tcommand.Parameters.Add(new " + this.GetSqlParameterText() + "(\"" + parameterDef.ParameterName + "\", ");
 					
 					// buildText.Append("(object) " + argumentDef.ArgumentName + " ?? DBNull.Value");
-					if (parameterDef.IsNullable == true) {
+					// if (parameterDef.IsNullable == true) {
+					if (argumentDef.IsNullable == true) {
 						buildText.Append("(object) " + argumentDef.ArgumentName + " ?? DBNull.Value");
 					}
 					else {
