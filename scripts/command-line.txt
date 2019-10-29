@@ -85,3 +85,8 @@ dotnet run -- --modelsns=GMGame.Basketball \
 --modelout=/tmp/models.json \
 --namemapfile=/sav/Dropbox/projects/gmgame/tidal/Basketball-tidal-mappings.json \
 --dblibrary=mssql
+
+
+dotnet run -- --modelsns=GMGame.Basketball --modelsdll=/sav/Dropbox/projects/gmgame/Core/bin/Debug/netstandard2.0/Core.dll,/sav/Dropbox/projects/gmgame/Basketball/bin/Debug/netstandard2.0/Basketball.dll --modulename=Engine --conn="server=localhost;user=OpenUser;database=Basketball;password=_badpass1" --sqlout=/sav/Dropbox/projects/gmgame/sql/Engine-tidal.sql --out=/sav/Dropbox/projects/gmgame/Engine/DataAccess.cs --namespace=GMGame.Engine --tableout=/tmp/tables-tidal.json --storedprocout=/tmp/stored-proc.json --modelout=/tmp/models.json --namemapfile=/sav/Dropbox/projects/gmgame/tidal/Basketball-tidal-mappings.json --ignore=LastNameImport,Player_SeasonPerf_View,BasketballCoachEvalSeed,BasketballPosition --dblibrary=mssql --verbose --createproc --removeproc
+
+dotnet run -- --modelsns=GMGame.Basketball --modelsdll=/sav/Dropbox/projects/gmgame/Core/bin/Debug/netstandard2.0/Core.dll,/sav/Dropbox/projects/gmgame/Basketball/bin/Debug/netstandard2.0/Basketball.dll --modulename=Web --conn="server=localhost;user=OpenUser;database=Basketball;password=_badpass1" --sqlout=/sav/Dropbox/projects/gmgame/sql/Web-tidal.sql --out=/sav/Dropbox/projects/gmgame/WebService/DataAccess.cs --namespace=GMGame.WebService --tableout=/tmp/tables-tidal.json --storedprocout=/tmp/stored-proc.json --modelout=/tmp/models.json --namemapfile=/sav/Dropbox/projects/gmgame/tidal/Basketball-tidal-mappings.json --ignore=LastNameImport,Player_SeasonPerf_View,BasketballCoachEvalSeed,BasketballPosition --dblibrary=mssql --verbose --createproc --removeproc
