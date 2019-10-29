@@ -19,6 +19,7 @@ namespace TidalCSharp {
 
 			foreach (ProcedureDef procedureDef in procedureDefList) {
 				string procedureName = procedureDef.ProcedureName;
+				
 				int firstUnderscoreIndex = procedureName.IndexOf('_');
 				int secondUnderscoreIndex = procedureName.IndexOf('_', firstUnderscoreIndex + 1);
 				// int lastUnderscoreIndex = procedureName.LastIndexOf('_');
@@ -95,16 +96,21 @@ namespace TidalCSharp {
 						functionDef.ReturnTypeNamespace = null;
 					}			
 					else {
-
-						/* we assume everything does not allow nulls unless it actually does */
 						bool isNullable = false;
 						if (typeCode != "string") {
 							if (parameterDef.ColumnDef != null) {
 								if (parameterDef.ColumnDef.IsNullable == true) {
 									isNullable = true;
 								}
-							}					
+							}
+							else {
+								/* if we don't know, we are going to allow them */
+								isNullable = true;
+							}				
+							
 						}
+
+
 
 						ArgumentDef argumentDef = new ArgumentDef {
 							ArgumentName = Char.ToLowerInvariant(parameterDef.ParameterName[1]) + parameterDef.ParameterName.Substring(2),

@@ -177,7 +177,7 @@ namespace TidalCSharp {
 						CreateFunctionSingleRow(classText, internalInterfaceText, modelDef, modelDefList, functionDef, namespaceTagMap);
 					}
 					else {
-						CreateFunctionNoRows(classText, internalInterfaceText, modelDef, functionDef, namespaceTagMap);
+						CreateFunctionNoRows(classText, internalInterfaceText, modelDef, modelDefList, functionDef, namespaceTagMap);
 					}
 					classText.AppendLine("");
 				}
@@ -231,7 +231,12 @@ namespace TidalCSharp {
 		}
 
 
-		public void CreateFunctionNoRows(StringBuilder buildText, StringBuilder internalInterfaceText, ModelDef modelDef, FunctionDef functionDef, Dictionary<string, string> namespaceTagMap) {
+		public void CreateFunctionNoRows(StringBuilder buildText,
+					StringBuilder internalInterfaceText,
+					ModelDef modelDef,
+					List<ModelDef> modelDefList,
+					FunctionDef functionDef,
+					Dictionary<string, string> namespaceTagMap) {
 			/* version using all arguments */
 
 			string functionString = GetFunctionSignature(modelDef.ModelName, functionDef, namespaceTagMap);
@@ -275,7 +280,7 @@ namespace TidalCSharp {
 					buildText.Append("return ");
 				}
 				buildText.AppendLine("this." + functionDef.FunctionName + "(conn, trans,");
-				AddFunctionArguments(buildText, modelDef, functionDef);
+				AddFunctionArguments(buildText, modelDef, modelDefList, functionDef);
 
 				buildText.AppendLine("\t\t\t}");
 			}
@@ -379,7 +384,7 @@ namespace TidalCSharp {
 				buildText.AppendLine("\t\t\t\treturn this." + functionDef.FunctionName + "(conn, trans");
 				AddMakeObjectCallFunctionArguments(buildText, namespaceTagMap, modelDef, modelDefList);
 				buildText.AppendLine(",");
-				AddFunctionArguments(buildText, modelDef, functionDef);
+				AddFunctionArguments(buildText, modelDef, modelDefList, functionDef);
 				buildText.AppendLine("\t\t\t}");
 
 
@@ -442,7 +447,7 @@ namespace TidalCSharp {
 			return buildText.ToString();
 		}
 
-		public void AddFunctionArguments(StringBuilder buildText, ModelDef modelDef, FunctionDef functionDef) {
+		public void AddFunctionArguments(StringBuilder buildText, ModelDef modelDef, List<ModelDef> modelDefList, FunctionDef functionDef) {
 			bool firstParameter = true;
 			foreach (ArgumentDef argumentDef in functionDef.ArgumentDefList) {
 				if (firstParameter) {
@@ -468,10 +473,23 @@ namespace TidalCSharp {
 						string subPropertyName = propertyDef.PropertyName;
 						if (argumentDef.ArgumentName.EndsWith("Key", false, CultureInfo.InvariantCulture)) {
 							/* TODO: this is failing when type is an interface */
-							subPropertyName = propertyDef.PropertyTypeCode + "ID";
+
+							var referencedModelDef = propertyDef.GetModelDef(modelDefList);
+							var idPropertyName = propertyDef.PropertyTypeCode + "ID";
+							var idPropertyDef = referencedModelDef.PropertyDefMap[idPropertyName];
+							var idTypeCode = idPropertyDef.PropertyTypeCode;
+
+							// buildText.Append($"/* {idPropertyName}, {idPropertyDef}, {idTypeCode}");
+							if (idTypeCode.EndsWith("?")) {
+								subPropertyName = idPropertyName + ".Value";
+							}
+							else {
+								subPropertyName = idPropertyName;
+							}
 						}
 						if (argumentDef.IsNullable) {
-							buildText.Append("(inputObject." + propertyDef.PropertyName + " == null) ? (" + argumentDef.ArgumentTypeCode + "?)null : inputObject." + propertyDef.PropertyName + "." + subPropertyName);
+							// buildText.Append("(inputObject." + propertyDef.PropertyName + " == null) ? (" + argumentDef.ArgumentTypeCode + "?)null : inputObject." + propertyDef.PropertyName + "." + subPropertyName);
+							buildText.Append("inputObject." + propertyDef.PropertyName + "?." + subPropertyName);
 						} else {
 							buildText.Append("inputObject." + propertyDef.PropertyName + "." + subPropertyName);
 						}

@@ -169,9 +169,16 @@ namespace TidalCSharp {
 
 
 
+/* TODO: if you have an interface, and a referring class uses the interface 
+	and not the implementing object, but you put the object name + Key in the
+	database table, TIDAL is making procedures/functions using the interface
+	name + Key, and this doesn't map back to the table to get the columndef */
+						
+
 						/* try to find the best guess as to the field it may be */
 						ColumnDef columnDef;
 						procedureDef.TableDef.ColumnDefMap.TryGetValue(parameterName.Substring(1), out columnDef);
+// if (columnDef == null) Console.WriteLine("Could not get ColumnDef for " + parameterName.Substring(1) + " of " + procedureDef.ProcedureName);
 
 
 						ParameterDef parameterDef = new ParameterDef {
